@@ -99,14 +99,26 @@
       color: #FF5A5F;
       animation: blink 0.8s infinite alternate;
     }
+    body.colorblind .hud-timer.urgent {
+      color: #FFFFFF !important;
+    }
+    body.colorblind .urgent::before {
+      content: "⚠ ";
+    }
+    body.colorblind .interact-prompt {
+      border-color: #00B3FF !important;
+      background: rgba(0, 80, 160, 0.95) !important;
+    }
     @keyframes blink {
       0% { opacity: 1; transform: scale(1); }
       100% { opacity: 0.5; transform: scale(1.08); }
     }
     .mote-bar-container {
       display: flex;
-      gap: 5px;
+      flex-wrap: wrap;
+      gap: 4px;
       margin-top: 6px;
+      max-width: 190px;
     }
     .mote-cell {
       width: 14px;
@@ -612,6 +624,10 @@
       <div class="settings-row">
         <span>Độ nhạy chuột:</span>
         <input type="range" id="sens-slider" min="1" max="10" value="4" />
+      </div>
+      <div class="settings-row">
+        <span>Bảng màu dễ phân biệt (Mù màu):</span>
+        <input type="checkbox" id="cb-toggle" style="width: 18px; height: 18px; cursor: pointer;" />
       </div>
       <button class="btn-action" id="btn-resume">Tiếp tục</button>
       <button class="btn-secondary" id="btn-restart-from-pause">Chơi lại Đêm</button>

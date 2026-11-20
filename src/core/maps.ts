@@ -34,11 +34,11 @@ function degToRad(deg: number): number {
 // ----------------- NIGHT 1 -----------------
 export function getNight1Map(): MapConfig {
   const lanterns: LanternState[] = [
-    { id: "L1", pos: [0, 0, 25], lit: false, deposited: 0 },
-    { id: "L2", pos: [23.8, 0, 7.7], lit: false, deposited: 0 },
-    { id: "L3", pos: [14.7, 0, -20.2], lit: false, deposited: 0 },
-    { id: "L4", pos: [-14.7, 0, -20.2], lit: false, deposited: 0 },
-    { id: "L5", pos: [-23.8, 0, 7.7], lit: false, deposited: 0 },
+    { id: "L1", pos: [0, 0, 25], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L2", pos: [23.8, 0, 7.7], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L3", pos: [14.7, 0, -20.2], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L4", pos: [-14.7, 0, -20.2], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L5", pos: [-23.8, 0, 7.7], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
   ];
 
   const moteSpawnPoints: [number, number, number][] = [];
@@ -62,7 +62,7 @@ export function getNight1Map(): MapConfig {
 
   return {
     night: 1,
-    duration_s: 300,
+    duration_s: 240,
     lanterns,
     moteSpawnPoints,
     shadeSpawnPoints,
@@ -83,12 +83,12 @@ export function getNight1Map(): MapConfig {
 // ----------------- NIGHT 2 -----------------
 export function getNight2Map(): MapConfig {
   const lanterns: LanternState[] = [
-    { id: "L1", pos: [0, 0, 20], lit: false, deposited: 0 },
-    { id: "L2", pos: [17, 0, -10], lit: false, deposited: 0 },
-    { id: "L3", pos: [-17, 0, -10], lit: false, deposited: 0 },
-    { id: "L4", pos: [70, 0, 20], lit: false, deposited: 0 },
-    { id: "L5", pos: [87, 0, -10], lit: false, deposited: 0 },
-    { id: "L6", pos: [53, 0, -10], lit: false, deposited: 0 },
+    { id: "L1", pos: [0, 0, 20], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L2", pos: [17, 0, -10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L3", pos: [-17, 0, -10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L4", pos: [70, 0, 20], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L5", pos: [87, 0, -10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L6", pos: [53, 0, -10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
   ];
 
   const moteSpawnPoints: [number, number, number][] = [];
@@ -157,7 +157,7 @@ export function getNight2Map(): MapConfig {
 
   return {
     night: 2,
-    duration_s: 330,
+    duration_s: 270,
     lanterns,
     moteSpawnPoints,
     shadeSpawnPoints,
@@ -190,13 +190,13 @@ export function getNight2Map(): MapConfig {
 // ----------------- NIGHT 3 -----------------
 export function getNight3Map(): MapConfig {
   const lanterns: LanternState[] = [
-    { id: "L1", pos: [0, 6, 6], lit: false, deposited: 0 },
-    { id: "L2", pos: [18, 3, 10], lit: false, deposited: 0 },
-    { id: "L3", pos: [-18, 3, 10], lit: false, deposited: 0 },
-    { id: "L4", pos: [35, 0, -10], lit: false, deposited: 0 },
-    { id: "L5", pos: [-35, 0, -10], lit: false, deposited: 0 },
-    { id: "L6", pos: [20, 0, -35], lit: false, deposited: 0 },
-    { id: "L7", pos: [-20, 0, -35], lit: false, deposited: 0 },
+    { id: "L1", pos: [0, 6, 6], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L2", pos: [18, 3, 10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L3", pos: [-18, 3, 10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L4", pos: [35, 0, -10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L5", pos: [-35, 0, -10], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L6", pos: [20, 0, -35], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
+    { id: "L7", pos: [-20, 0, -35], lit: false, deposited: 0, fuel: 0, fuel_ticks: 0, ever_lit: false, relit_count: 0 },
   ];
 
   const moteSpawnPoints: [number, number, number][] = [];
@@ -241,7 +241,7 @@ export function getNight3Map(): MapConfig {
 
   return {
     night: 3,
-    duration_s: 360,
+    duration_s: 300,
     lanterns,
     moteSpawnPoints,
     shadeSpawnPoints,

@@ -19,18 +19,18 @@ interface NightLore {
 const NIGHT_LORES: Record<number, NightLore> = {
   1: {
     title: "ĐÊM 1 — ĐẢO BẾN",
-    quote: '"Mây à, sương đen đã nuốt hết ánh sáng. Con hãy thu thập đom đóm thắp sáng lại 5 ngọn Đèn Lồng Lớn." — Lời Ông Đăng',
-    desc: "Nhiệm vụ: Thắp sáng cả 5 Đèn Lồng Lớn và né tránh Bóng Mực.",
+    quote: '"Mây à, sương đen đã nuốt hết ánh sáng. Con hãy thu thập đom đóm, thắp đèn và giữ lửa sáng tới khi bình minh ló rạng." — Lời Ông Đăng',
+    desc: "Nhiệm vụ: Giữ tối thiểu 3/5 Đèn Lồng sáng tới Bình Minh (4 phút). Chú ý châm dầu trước khi đèn tắt và tránh để Bóng Mực hút dầu!",
   },
   2: {
     title: "ĐÊM 2 — ĐẢO CAU",
     quote: '"Đảo Cau được nối bởi cầu tre và các bục nhảy cổ xưa. Hãy cẩn thận Gió Lạc sẽ cướp đom đóm của con!" — Lời Ông Đăng',
-    desc: "Nhiệm vụ: Dùng bục nhảy qua lại giữa 2 đảo, thu thập Bùa Gió và thắp sáng 6 Đèn Lồng Lớn.",
+    desc: "Nhiệm vụ: Dùng bục nhảy qua lại giữa 2 đảo, thu thập Bùa Gió và giữ tối thiểu 4/6 Đèn Lồng sáng tới Bình Minh (4 phút 30s).",
   },
   3: {
     title: "ĐÊM 3 — ĐẢO CHUÔNG",
     quote: '"Tháp chuông đứng sững sững trên đỉnh cao nhất. Gió giật từng cơn sẽ thổi bạt mọi thứ. Đêm cuối cùng rồi, cố lên con!" — Lời Ông Đăng',
-    desc: "Nhiệm vụ: Leo qua 3 tầng địa hình, vượt qua gió mạnh và thắp sáng cả 7 ngọn Đèn Lồng để đón Bình Minh.",
+    desc: "Nhiệm vụ: Leo qua 3 tầng địa hình, giữ tối thiểu 5/7 Đèn Lồng sáng tới Bình Minh (5 phút) để xua tan màn đêm vĩnh viễn.",
   },
 };
 
@@ -255,6 +255,20 @@ async function initGame(): Promise<void> {
     localStorage.setItem("dao_den_long_sens", String(mouseSens));
   });
 
+  // Colorblind Mode toggle
+  const cbToggle = document.getElementById("cb-toggle") as HTMLInputElement | null;
+  let isColorblind = localStorage.getItem("dao_den_long_cb") === "true";
+  if (cbToggle) {
+    cbToggle.checked = isColorblind;
+    gameScene.setColorblindMode(isColorblind);
+    cbToggle.addEventListener("change", () => {
+      isColorblind = cbToggle.checked;
+      localStorage.setItem("dao_den_long_cb", String(isColorblind));
+      gameScene.setColorblindMode(isColorblind);
+      showToast(isColorblind ? "👁️ Đã bật Bảng màu dễ phân biệt" : "👁️ Đã tắt Bảng màu dễ phân biệt");
+    });
+  }
+
   function showNightIntro(night: number): void {
     const lore = NIGHT_LORES[night] || NIGHT_LORES[1];
     introTitle.textContent = lore.title;
@@ -432,9 +446,9 @@ async function initGame(): Promise<void> {
       ctx.stroke();
     }
 
-    // Safe zones (6m radius) around lit lanterns
+    // Safe zones (6m radius) around lit lanterns with fuel >= 30
     for (const l of sim.lanterns) {
-      if (l.lit) {
+      if (l.lit && l.fuel >= 30) {
         const [lx, ly] = worldToMap(l.pos[0], l.pos[2]);
         ctx.fillStyle = "rgba(242, 193, 78, 0.15)";
         ctx.beginPath();
@@ -456,10 +470,15 @@ async function initGame(): Promise<void> {
     }
 
     // Lanterns
+    const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
     for (const l of sim.lanterns) {
       const [lx, ly] = worldToMap(l.pos[0], l.pos[2]);
       if (l.lit) {
-        ctx.fillStyle = "#55FFFF";
+        if (l.fuel < 30) {
+          ctx.fillStyle = blinkOn ? (isColorblind ? "#FFFFFF" : "#FF4422") : "#55FFFF";
+        } else {
+          ctx.fillStyle = "#55FFFF";
+        }
         ctx.beginPath();
         ctx.arc(lx, ly, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -472,10 +491,14 @@ async function initGame(): Promise<void> {
       }
     }
 
-    // Shades (Bóng Mực: purple dots)
+    // Shades (Bóng Mực: cyan/white in colorblind mode, purple in normal mode)
     for (const s of sim.shades) {
       const [sx, sy] = worldToMap(s.pos[0], s.pos[2]);
-      ctx.fillStyle = s.state === "stunned" ? "#665588" : "#A033FF";
+      if (isColorblind) {
+        ctx.fillStyle = s.state === "stunned" ? "#5588AA" : "#00B3FF";
+      } else {
+        ctx.fillStyle = s.state === "stunned" ? "#665588" : "#A033FF";
+      }
       ctx.beginPath();
       ctx.arc(sx, sy, 3, 0, Math.PI * 2);
       ctx.fill();
@@ -529,10 +552,19 @@ async function initGame(): Promise<void> {
     // 3. Score & Lanterns
     scoreVal.textContent = String(totalCampaignScore + sim.score);
     const litCount = sim.lanterns.filter((l) => l.lit).length;
-    lanternsProgress.textContent = `Đèn: ${litCount} / ${sim.lanterns.length}`;
+    const minRequired = Math.ceil(sim.lanterns.length * tuning.win_ratio);
+    lanternsProgress.textContent = `Đèn sáng: ${litCount} / ${sim.lanterns.length} (Cần ≥ ${minRequired})`;
 
-    // 4. Mote bar (10 cells)
-    motesCountText.textContent = `${sim.player.carried}/10`;
+    // 4. Mote bar (Dynamic capacity: 10 to 20 cells)
+    motesCountText.textContent = `${sim.player.carried}/${sim.player.capacity}`;
+    while (moteBar.children.length < sim.player.capacity) {
+      const div = document.createElement("div");
+      div.className = "mote-cell";
+      moteBar.appendChild(div);
+    }
+    while (moteBar.children.length > sim.player.capacity) {
+      moteBar.removeChild(moteBar.lastChild!);
+    }
     const cells = moteBar.querySelectorAll(".mote-cell");
     cells.forEach((cell, i) => {
       if (i < sim.player.carried) {
@@ -558,38 +590,51 @@ async function initGame(): Promise<void> {
     pulseCdOverlay.style.height = `${pulseCdRatio * 100}%`;
 
     // 7. Interact prompt & Quest Guidance
-    let nearbyUnlit: (typeof sim.lanterns)[0] | null = null;
-    let nearestUnlitDist = 99999;
+    // Candidate lantern: unlit or (lit and fuel < 100)
+    let candidateLantern: (typeof sim.lanterns)[0] | null = null;
+    let nearestCandDist = 99999;
     for (const l of sim.lanterns) {
-      if (!l.lit) {
-        const d = Math.hypot(sim.player.pos[0] - l.pos[0], sim.player.pos[2] - l.pos[2]);
-        if (d < nearestUnlitDist) nearestUnlitDist = d;
-        if (d <= tuning.interact_radius && !nearbyUnlit) {
-          nearbyUnlit = l;
+      const canReceive = !l.lit || (l.lit && l.fuel < 100);
+      if (!canReceive) continue;
+      const d = Math.hypot(sim.player.pos[0] - l.pos[0], sim.player.pos[2] - l.pos[2]);
+      if (d <= tuning.interact_radius) {
+        if (d < nearestCandDist || (Math.abs(d - nearestCandDist) < 1e-4 && (!candidateLantern || l.id < candidateLantern.id))) {
+          nearestCandDist = d;
+          candidateLantern = l;
         }
       }
     }
 
-    if (nearbyUnlit) {
+    if (candidateLantern) {
       interactPrompt.style.display = "block";
-      interactPrompt.textContent = `E — Nạp ánh sáng (${nearbyUnlit.deposited}/${tuning.lantern_cost})`;
-      questStep.textContent = `2. Nhấn [E] nạp ánh sáng (${nearbyUnlit.deposited}/${tuning.lantern_cost})`;
-      questSubtext.textContent = `Đang mang ${sim.player.carried} đom đóm. Cần tổng 10 để thắp sáng!`;
+      if (!candidateLantern.lit) {
+        const cost = candidateLantern.ever_lit ? tuning.relight_cost : tuning.lantern_cost;
+        const action = candidateLantern.ever_lit ? "Thắp lại" : "Nạp ánh sáng";
+        interactPrompt.textContent = `E — ${action} Đèn ${candidateLantern.id} (${candidateLantern.deposited}/${cost})`;
+        questStep.textContent = `Nhấn [E] ${action} Đèn ${candidateLantern.id} (${candidateLantern.deposited}/${cost})`;
+        questSubtext.textContent = `Đang mang ${sim.player.carried}/${sim.player.capacity} đom đóm. Cần ${cost - candidateLantern.deposited} để thắp sáng!`;
+      } else {
+        const needed = Math.ceil((100 - candidateLantern.fuel) / tuning.fuel_per_mote);
+        interactPrompt.textContent = `E — Châm dầu Đèn ${candidateLantern.id} (Dầu: ${Math.floor(candidateLantern.fuel)}/100)`;
+        questStep.textContent = `Nhấn [E] châm dầu Đèn ${candidateLantern.id} (Dầu: ${Math.floor(candidateLantern.fuel)}/100)`;
+        questSubtext.textContent = `Cần tối đa ${needed} đom đóm để đổ đầy bình (100). Đang có ${sim.player.carried}.`;
+      }
     } else {
       interactPrompt.style.display = "none";
 
-      if (litCount >= sim.lanterns.length) {
-        questStep.textContent = "✨ Tất cả đèn đã sáng!";
-        questSubtext.textContent = "Bình minh đang thức giấc trên Đảo Đèn Lồng...";
-      } else if (sim.player.carried >= 10) {
-        questStep.textContent = "2. Túi đã đầy (10/10)! Đi tới Đèn Lồng";
-        questSubtext.textContent = "Nhìn các cột sáng cao trên trời để tìm đèn chưa thắp";
-      } else if (sim.player.carried > 0) {
-        questStep.textContent = `1. Thu thập thêm đom đóm (${sim.player.carried}/10)`;
-        questSubtext.textContent = `Đèn gần nhất cách ${Math.round(nearestUnlitDist)}m. Có thể mang nạp bất kỳ lúc nào`;
+      const lowFuelLantern = sim.lanterns.find((l) => l.lit && l.fuel < 30);
+      if (lowFuelLantern) {
+        questStep.textContent = `⚠ Đèn ${lowFuelLantern.id} sắp cạn dầu (${Math.floor(lowFuelLantern.fuel)}%)!`;
+        questSubtext.textContent = "Đèn mất vùng an toàn 6m và bị Bóng Mực hút! Hãy chạy tới châm dầu gấp!";
+      } else if (sim.player.carried >= sim.player.capacity) {
+        questStep.textContent = `2. Túi đã đầy (${sim.player.carried}/${sim.player.capacity})! Đi thắp đèn hoặc châm dầu`;
+        questSubtext.textContent = "Nhìn các cột sáng trên trời để tìm đèn cần nạp hoặc tiếp dầu";
+      } else if (litCount < minRequired) {
+        questStep.textContent = `1. Cần thắp thêm đèn (${litCount}/${minRequired} đèn tối thiểu)`;
+        questSubtext.textContent = `Nhặt đom đóm (${sim.player.carried}/${sim.player.capacity}) và thắp sáng các đèn trên đảo`;
       } else {
-        questStep.textContent = `1. Nhặt đom đóm rải rác trên đảo (0/10)`;
-        questSubtext.textContent = "Chạy qua các đốm sáng vàng để tự động nhặt vào túi";
+        questStep.textContent = `✨ Đang giữ đảo an toàn (${litCount}/${sim.lanterns.length} đèn sáng)`;
+        questSubtext.textContent = "Châm dầu và bảo vệ các ngọn đèn cho tới khi Bình Minh ló rạng!";
       }
     }
 
@@ -601,13 +646,23 @@ async function initGame(): Promise<void> {
     for (const ev of events) {
       if (ev.name === "mote_picked") {
         sounds.playMotePicked();
-        showToast(`+1 Đom đóm (${sim.player.carried}/10)`);
+        showToast(`+1 Đom đóm (${sim.player.carried}/${sim.player.capacity})`);
       } else if (ev.name === "deposit") {
         sounds.playDeposit();
-        showToast(`Đã nạp ${ev.data.amount} đom đóm vào Đèn Lồng!`);
+        showToast(`Đã nạp ${ev.data.amount} đom đóm vào Đèn Lồng ${ev.data.lantern_id}!`);
+      } else if (ev.name === "refuel") {
+        sounds.playDeposit();
+        showToast(`Đã châm ${ev.data.used} đom đóm vào Đèn ${ev.data.lantern_id} (Dầu: ${Math.floor(ev.data.fuel)})!`);
       } else if (ev.name === "lantern_lit") {
         sounds.playLanternLit();
-        showToast(`✨ Đèn Lồng đã thắp sáng! Vùng an toàn 6m kích hoạt!`);
+        if (ev.data.relight) {
+          showToast(`✨ Đã thắp lại Đèn Lồng ${ev.data.lantern_id}! (Dầu: 100)`);
+        } else {
+          showToast(`✨ Đèn Lồng ${ev.data.lantern_id} đã sáng! Túi tăng sức chứa lên ${sim.player.capacity}!`);
+        }
+      } else if (ev.name === "lantern_out") {
+        sounds.playHit();
+        showToast(`🚨 Đèn Lồng ${ev.data.lantern_id} đã CẠN DẦU và TẮT! Cần 5 đom đóm thắp lại!`);
       } else if (ev.name === "pulse") {
         sounds.playPulse();
         character.triggerPulseEffect();
@@ -632,11 +687,11 @@ async function initGame(): Promise<void> {
           sounds.playWin();
           if (currentNight < 3) {
             modalResultTitle.textContent = `VƯỢT QUA ĐÊM ${currentNight}!`;
-            modalResultMsg.textContent = "Ánh sáng đã đẩy lùi sương đen. Hành trình tiếp tục tới hòn đảo kế tiếp!";
+            modalResultMsg.textContent = "Bình minh đã ló rạng! Bạn đã bảo vệ thành công các ngọn Đèn Lồng qua đêm tối.";
             btnNextAction.textContent = `Sang Đêm ${currentNight + 1}`;
           } else {
-            modalResultTitle.textContent = "BÌNH MINH ĐÃ TỚI!";
-            modalResultMsg.textContent = "Mây đã thắp sáng toàn bộ 3 hòn đảo! Bình minh rực rỡ đã trở lại trên Đảo Đèn Lồng!";
+            modalResultTitle.textContent = "BÌNH MINH TOÀN DIỆN!";
+            modalResultMsg.textContent = "Mây đã giữ sáng toàn bộ 3 hòn đảo qua mọi hiểm nguy! Bình minh vĩnh cửu đã trở lại!";
             btnNextAction.textContent = "Chơi lại từ đầu";
           }
         } else {
@@ -644,7 +699,7 @@ async function initGame(): Promise<void> {
           if (reason === "no_flames") {
             modalResultMsg.textContent = "Mây đã cạn kiệt ngọn lửa sinh mệnh. Đêm tối nuốt chửng đảo.";
           } else {
-            modalResultMsg.textContent = "Trời đã sáng nhưng các đèn chưa được thắp đủ. Sương đen bao phủ.";
+            modalResultMsg.textContent = "Trời đã sáng nhưng số đèn sáng không đạt tối thiểu 60%. Sương đen bao phủ.";
           }
           btnNextAction.textContent = "Thử lại Đêm này";
         }

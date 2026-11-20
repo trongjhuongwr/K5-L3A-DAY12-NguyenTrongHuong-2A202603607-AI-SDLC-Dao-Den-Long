@@ -2,6 +2,10 @@ export function round3(val: number): number {
   return Math.round(val * 1000) / 1000;
 }
 
+export function round1(val: number): number {
+  return Math.round(val * 10) / 10;
+}
+
 export function distXZ(
   p1: [number, number, number],
   p2: [number, number, number]

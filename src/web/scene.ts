@@ -12,10 +12,21 @@ export class GameScene {
   private cloudsMesh: THREE.InstancedMesh;
   private islandGroup: THREE.Group;
 
+  public colorblindMode: boolean = false;
+
   public lanternMeshes: Map<
     string,
-    { group: THREE.Group; light: THREE.PointLight; core: THREE.Mesh; beacon: THREE.Mesh }
+    {
+      group: THREE.Group;
+      light: THREE.PointLight;
+      core: THREE.Mesh;
+      beacon: THREE.Mesh;
+      safeRing: THREE.Mesh;
+      fuelBarBg: THREE.Mesh;
+      fuelBar: THREE.Mesh;
+    }
   > = new Map();
+
   public moteMeshes: Map<string, THREE.Group> = new Map();
   public shadeMeshes: Map<string, { group: THREE.Group; eye: THREE.Mesh; aura: THREE.PointLight }> = new Map();
   public drifterMeshes: Map<string, THREE.Group> = new Map();
@@ -56,6 +67,10 @@ export class GameScene {
     this.cloudsMesh = this.buildSeaOfClouds();
 
     window.addEventListener("resize", () => this.onResize());
+  }
+
+  setColorblindMode(enabled: boolean): void {
+    this.colorblindMode = enabled;
   }
 
   loadMapGeometry(mapConfig: MapConfig): void {
@@ -110,121 +125,153 @@ export class GameScene {
       bridge.position.set(35, -0.2, 0);
       this.islandGroup.add(bridge);
 
-      this.buildJumpPadVisual(20, 0, 18);
-      this.buildJumpPadVisual(50, 0, -18);
+      // 2 Jump pads
+      for (const pad of mapConfig.jumpPads) {
+        const padGeo = new THREE.CylinderGeometry(1.2, 1.4, 0.3, 16);
+        const padMat = new THREE.MeshStandardMaterial({
+          color: 0xf2c14e,
+          roughness: 0.5,
+          emissive: 0xffb347,
+          emissiveIntensity: 0.6,
+        });
+        const padMesh = new THREE.Mesh(padGeo, padMat);
+        padMesh.position.set(pad.pos[0], pad.pos[1] + 0.15, pad.pos[2]);
+        this.islandGroup.add(padMesh);
+      }
     } else if (mapConfig.night === 3) {
       // Đảo Chuông: 3 tiers
-      const tier0Geo = new THREE.CylinderGeometry(45, 43, 4, 64);
-      const tier0 = new THREE.Mesh(tier0Geo, grassMat);
-      tier0.position.y = -2;
-      this.islandGroup.add(tier0);
+      // Tier 0: r=42m, Y=0
+      const t0Geo = new THREE.CylinderGeometry(42, 40, 3, 64);
+      const t0 = new THREE.Mesh(t0Geo, grassMat);
+      t0.position.y = -1.5;
+      this.islandGroup.add(t0);
 
-      const tier1Geo = new THREE.CylinderGeometry(24, 24, 3, 32, 1, false, 0, Math.PI);
-      const tier1 = new THREE.Mesh(tier1Geo, stoneMat);
-      tier1.position.set(0, 1.5, 0);
-      this.islandGroup.add(tier1);
+      // Tier 1: ring 12 <= r <= 24, z > 0, Y=3
+      const t1Geo = new THREE.CylinderGeometry(24, 24, 3, 48, 1, false, 0, Math.PI);
+      const t1 = new THREE.Mesh(t1Geo, grassMat);
+      t1.position.set(0, 1.5, 0);
+      t1.rotation.y = Math.PI;
+      this.islandGroup.add(t1);
 
-      const tier2Geo = new THREE.CylinderGeometry(8, 8, 3, 32);
-      const tier2 = new THREE.Mesh(tier2Geo, stoneMat);
-      tier2.position.set(0, 4.5, 0);
-      this.islandGroup.add(tier2);
+      // Tier 2: disc r=8m, Y=6
+      const t2Geo = new THREE.CylinderGeometry(8, 8, 3, 32);
+      const t2 = new THREE.Mesh(t2Geo, stoneMat);
+      t2.position.set(0, 4.5, 0);
+      this.islandGroup.add(t2);
 
-      const towerGeo = new THREE.CylinderGeometry(2, 2.2, 8, 16);
-      const tower = new THREE.Mesh(towerGeo, woodMat);
-      tower.position.set(0, 10, 0);
+      // Center Bell Tower: cylinder r=2m, height 12m, Y=6 to 18
+      const towerGeo = new THREE.CylinderGeometry(2, 2.4, 12, 16);
+      const tower = new THREE.Mesh(towerGeo, stoneMat);
+      tower.position.set(0, 12, 0);
       this.islandGroup.add(tower);
 
-      this.buildJumpPadVisual(0, 3, 13);
+      // Jump pad at (0, 3, 13)
+      for (const pad of mapConfig.jumpPads) {
+        const padGeo = new THREE.CylinderGeometry(1.2, 1.4, 0.3, 16);
+        const padMat = new THREE.MeshStandardMaterial({
+          color: 0xf2c14e,
+          roughness: 0.5,
+          emissive: 0xffb347,
+          emissiveIntensity: 0.6,
+        });
+        const padMesh = new THREE.Mesh(padGeo, padMat);
+        padMesh.position.set(pad.pos[0], pad.pos[1] + 0.15, pad.pos[2]);
+        this.islandGroup.add(padMesh);
+      }
     }
-  }
-
-  private buildJumpPadVisual(x: number, y: number, z: number): void {
-    const padGeo = new THREE.CylinderGeometry(1.0, 1.1, 0.2, 24);
-    const padMat = new THREE.MeshStandardMaterial({
-      color: 0x8fa3b8,
-      emissive: 0x2288aa,
-      emissiveIntensity: 0.8,
-      roughness: 0.3,
-    });
-    const pad = new THREE.Mesh(padGeo, padMat);
-    pad.position.set(x, y + 0.1, z);
-    this.islandGroup.add(pad);
   }
 
   private buildStars(): void {
+    const starCount = 600;
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 450;
-    const posArray = new Float32Array(starCount * 3);
+    const positions = new Float32Array(starCount * 3);
 
-    for (let i = 0; i < starCount * 3; i += 3) {
-      posArray[i] = (Math.random() - 0.5) * 200;
-      posArray[i + 1] = Math.random() * 60 + 20;
-      posArray[i + 2] = (Math.random() - 0.5) * 200;
+    for (let i = 0; i < starCount; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 180 + Math.random() * 60;
+
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 15;
+      positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
     }
 
-    starGeo.setAttribute("position", new THREE.BufferAttribute(posArray, 3));
+    starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     const starMat = new THREE.PointsMaterial({
-      color: 0xfff6c2,
-      size: 0.9,
+      color: 0xffffff,
+      size: 1.2,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.8,
     });
-    const starField = new THREE.Points(starGeo, starMat);
-    this.scene.add(starField);
+    const starPoints = new THREE.Points(starGeo, starMat);
+    this.scene.add(starPoints);
   }
 
   private buildSeaOfClouds(): THREE.InstancedMesh {
-    const cloudGeo = new THREE.DodecahedronGeometry(6, 1);
+    const count = 300;
+    const cloudGeo = new THREE.DodecahedronGeometry(14, 1);
     const cloudMat = new THREE.MeshStandardMaterial({
       color: 0x12384a,
-      roughness: 1.0,
+      roughness: 0.95,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.85,
     });
-    const count = 50;
+
     const mesh = new THREE.InstancedMesh(cloudGeo, cloudMat, count);
     const dummy = new THREE.Object3D();
 
     for (let i = 0; i < count; i++) {
-      const angle = (i * 2 * Math.PI) / count;
-      const dist = 50 + (i % 4) * 8;
-      dummy.position.set(
-        Math.cos(angle) * dist,
-        -5 - (i % 5),
-        Math.sin(angle) * dist
-      );
-      dummy.scale.set(1.8, 0.6, 1.8);
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.2;
+      const dist = 45 + Math.random() * 110;
+      const y = -14 + (Math.random() - 0.5) * 8;
+
+      dummy.position.set(Math.cos(angle) * dist, y, Math.sin(angle) * dist);
+      const s = 1.2 + Math.random() * 1.8;
+      dummy.scale.set(s * 1.5, s * 0.6, s * 1.5);
+      dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
       dummy.updateMatrix();
+
       mesh.setMatrixAt(i, dummy.matrix);
     }
+
     mesh.instanceMatrix.needsUpdate = true;
     this.scene.add(mesh);
     return mesh;
   }
 
-  // Sync 3D Lanterns with Beacon Beams
+  // Sync Lanterns (includes Phase 3 Fuel bar, 1Hz blinking, 20% collapsed when unlit)
   syncLanterns(lanterns: LanternState[]): void {
     for (const l of lanterns) {
       let entry = this.lanternMeshes.get(l.id);
       if (!entry) {
         const group = new THREE.Group();
-        group.position.set(l.pos[0], l.pos[1], l.pos[2]);
 
-        // Pole
-        const poleGeo = new THREE.CylinderGeometry(0.2, 0.25, 3.2, 12);
-        const poleMat = new THREE.MeshStandardMaterial({
-          color: 0x6b4a2f,
-          roughness: 0.9,
+        // Lantern stone base
+        const baseGeo = new THREE.CylinderGeometry(0.8, 1.0, 1.2, 12);
+        const baseMat = new THREE.MeshStandardMaterial({
+          color: 0xc9b48a,
+          roughness: 0.7,
         });
-        const pole = new THREE.Mesh(poleGeo, poleMat);
-        pole.position.y = 1.6;
-        group.add(pole);
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.y = 0.6;
+        group.add(base);
 
-        // Octagonal Cage
-        const cageGeo = new THREE.OctahedronGeometry(0.85, 0);
+        // Wooden pillar
+        const pillarGeo = new THREE.CylinderGeometry(0.2, 0.2, 2.0, 8);
+        const pillarMat = new THREE.MeshStandardMaterial({
+          color: 0x6b4a2f,
+          roughness: 0.8,
+        });
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.y = 2.0;
+        group.add(pillar);
+
+        // Lantern cage
+        const cageGeo = new THREE.OctahedronGeometry(1.1, 0);
         const cageMat = new THREE.MeshStandardMaterial({
-          color: 0x5b5f6e,
-          roughness: 0.6,
+          color: 0x6b4a2f,
           wireframe: true,
         });
         const cage = new THREE.Mesh(cageGeo, cageMat);
@@ -268,48 +315,100 @@ export class GameScene {
           side: THREE.DoubleSide,
         });
         const beacon = new THREE.Mesh(beaconGeo, beaconMat);
-        beacon.position.y = 25.0; // reaches up to Y=47.5m
+        beacon.position.y = 25.0;
         group.add(beacon);
 
+        // Fuel Gauge Bar (Plane facing camera)
+        const barBgGeo = new THREE.PlaneGeometry(1.5, 0.2);
+        const barBgMat = new THREE.MeshBasicMaterial({
+          color: 0x111424,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.85,
+        });
+        const fuelBarBg = new THREE.Mesh(barBgGeo, barBgMat);
+        fuelBarBg.position.y = 4.4;
+        group.add(fuelBarBg);
+
+        const barGeo = new THREE.PlaneGeometry(1.44, 0.14);
+        const barMat = new THREE.MeshBasicMaterial({
+          color: 0x20e377,
+          side: THREE.DoubleSide,
+        });
+        const fuelBar = new THREE.Mesh(barGeo, barMat);
+        fuelBar.position.set(0, 4.4, 0.01);
+        group.add(fuelBar);
+
         this.scene.add(group);
-        entry = { group, light, core, beacon };
+        entry = { group, light, core, beacon, safeRing, fuelBarBg, fuelBar };
         this.lanternMeshes.set(l.id, entry);
       }
 
       entry.group.position.set(l.pos[0], l.pos[1], l.pos[2]);
 
-      // Subtle beacon pulse
+      // Orient fuel bars to face camera
+      entry.fuelBarBg.quaternion.copy(this.camera.quaternion);
+      entry.fuelBar.quaternion.copy(this.camera.quaternion);
+
       const beaconMat = entry.beacon.material as THREE.MeshBasicMaterial;
 
       if (l.lit) {
-        entry.light.intensity = 3.0;
+        entry.group.scale.y = 1.0;
+        entry.fuelBarBg.visible = true;
+        entry.fuelBar.visible = true;
+
+        const fuelRatio = Math.max(0.01, l.fuel / 100.0);
+        entry.fuelBar.scale.x = fuelRatio;
+
+        const barMat = entry.fuelBar.material as THREE.MeshBasicMaterial;
+        if (l.fuel >= 50) {
+          barMat.color.setHex(0x20e377); // Green
+        } else if (l.fuel >= 30) {
+          barMat.color.setHex(0xf2c14e); // Yellow
+        } else {
+          barMat.color.setHex(0xff5a5f); // Red
+        }
+
         const coreMat = entry.core.material as THREE.MeshStandardMaterial;
         coreMat.color.setHex(0xffb347);
         coreMat.emissive.setHex(0xffe9b0);
-        coreMat.emissiveIntensity = 1.0;
 
-        const safeRing = entry.group.children[4] as THREE.Mesh;
-        if (safeRing && safeRing.material) {
-          (safeRing.material as THREE.MeshBasicMaterial).opacity = 0.35;
+        // Low fuel (<30): Lost safe zone, 1Hz blinking
+        if (l.fuel < 30) {
+          const blink = Math.sin(Date.now() * 0.006) > 0;
+          entry.light.intensity = blink ? 2.5 : 0.5;
+          coreMat.emissiveIntensity = blink ? 1.0 : 0.2;
+          (entry.safeRing.material as THREE.MeshBasicMaterial).opacity = 0;
+          beaconMat.color.setHex(0xff5a5f);
+          beaconMat.opacity = blink ? 0.35 : 0.08;
+        } else {
+          entry.light.intensity = 3.0;
+          coreMat.emissiveIntensity = 1.0;
+          (entry.safeRing.material as THREE.MeshBasicMaterial).opacity = 0.35;
+          beaconMat.color.setHex(0xffb347);
+          beaconMat.opacity = 0.15;
         }
-
-        // Lit lantern beacon turns into steady radiant gold
-        beaconMat.color.setHex(0xffb347);
-        beaconMat.opacity = 0.15;
       } else {
-        const fillRatio = Math.min(1.0, l.deposited / 10.0);
+        // Unlit: 20% collapsed in Y
+        entry.group.scale.y = 0.8;
+        entry.fuelBarBg.visible = false;
+        entry.fuelBar.visible = false;
+        (entry.safeRing.material as THREE.MeshBasicMaterial).opacity = 0;
+
+        const cost = l.ever_lit ? 5.0 : 10.0;
+        const fillRatio = Math.min(1.0, l.deposited / cost);
         entry.light.intensity = fillRatio * 1.0;
+
         const coreMat = entry.core.material as THREE.MeshStandardMaterial;
         if (fillRatio > 0) {
           coreMat.color.setHex(0xffb347);
           coreMat.emissive.setHex(0xff7700);
           coreMat.emissiveIntensity = fillRatio * 0.6;
         } else {
-          coreMat.color.setHex(0x5b5f6e);
+          coreMat.color.setHex(0x3a3f50);
           coreMat.emissive.setHex(0x000000);
         }
 
-        // Unlit beacon pulses brightly so player can spot it from far away
         const pulse = Math.sin(Date.now() * 0.004) * 0.15 + 0.35;
         beaconMat.color.setHex(0xffe58a);
         beaconMat.opacity = pulse;
@@ -322,6 +421,7 @@ export class GameScene {
     this.moonLight.intensity = 0.4 + 0.35 * (litCount / total);
   }
 
+  // Sync Motes
   syncMotes(motes: MoteState[]): void {
     const activeIds = new Set<string>();
 
@@ -351,16 +451,18 @@ export class GameScene {
       }
     }
 
-    for (const [id, group] of this.moteMeshes.entries()) {
+    for (const [id, mesh] of this.moteMeshes.entries()) {
       if (!activeIds.has(id)) {
-        this.scene.remove(group);
+        this.scene.remove(mesh);
         this.moteMeshes.delete(id);
       }
     }
   }
 
+  // Sync Shades (includes Colorblind mode & Drain animation)
   syncShades(shades: ShadeState[]): void {
     const activeIds = new Set<string>();
+    const baseColor = this.colorblindMode ? 0x00b3ff : 0x7a3cff;
 
     for (const s of shades) {
       activeIds.add(s.id);
@@ -380,12 +482,12 @@ export class GameScene {
         group.add(body);
 
         const eyeGeo = new THREE.SphereGeometry(0.14, 8, 8);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x7a3cff });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: baseColor });
         const eye = new THREE.Mesh(eyeGeo, eyeMat);
         eye.position.set(0, 0.9, 0.6);
         group.add(eye);
 
-        const aura = new THREE.PointLight(0x7a3cff, 1.2, 4.5);
+        const aura = new THREE.PointLight(baseColor, 1.2, 4.5);
         aura.position.y = 0.8;
         group.add(aura);
 
@@ -401,9 +503,20 @@ export class GameScene {
         entry.eye.material = new THREE.MeshBasicMaterial({ color: 0x3a3450 });
         entry.aura.color.setHex(0x3a3450);
         entry.aura.intensity = 0.3;
+      } else if (s.state === "drain") {
+        // Drain animation: pulsing rapidly
+        const drainBlink = Math.sin(Date.now() * 0.02) > 0;
+        const col = drainBlink ? 0xff5a5f : baseColor;
+        entry.eye.material = new THREE.MeshBasicMaterial({ color: col });
+        entry.aura.color.setHex(col);
+        entry.aura.intensity = 1.6;
+      } else if (s.state === "spawning") {
+        entry.eye.material = new THREE.MeshBasicMaterial({ color: baseColor });
+        entry.aura.color.setHex(baseColor);
+        entry.aura.intensity = 0.4;
       } else {
-        entry.eye.material = new THREE.MeshBasicMaterial({ color: 0x7a3cff });
-        entry.aura.color.setHex(0x7a3cff);
+        entry.eye.material = new THREE.MeshBasicMaterial({ color: baseColor });
+        entry.aura.color.setHex(baseColor);
         entry.aura.intensity = 1.2;
       }
     }
@@ -416,6 +529,7 @@ export class GameScene {
     }
   }
 
+  // Sync Drifters
   syncDrifters(drifters: DrifterState[]): void {
     const activeIds = new Set<string>();
 
@@ -444,8 +558,8 @@ export class GameScene {
           this.drifterMeshes.set(d.id, group);
         }
 
-        group.position.set(d.pos[0], d.pos[1], d.pos[2]);
-        group.rotation.y += 0.04;
+        const flutter = Math.sin(Date.now() * 0.015 + d.pos[0]) * 0.3;
+        group.position.set(d.pos[0], d.pos[1] + flutter, d.pos[2]);
       }
     }
 
@@ -457,6 +571,7 @@ export class GameScene {
     }
   }
 
+  // Sync Charms
   syncCharms(charms: CharmState[]): void {
     const activeIds = new Set<string>();
 
@@ -470,27 +585,22 @@ export class GameScene {
           const cardGeo = new THREE.BoxGeometry(0.5, 0.8, 0.06);
           const cardMat = new THREE.MeshStandardMaterial({
             color: 0xc8102e,
-            emissive: 0x770515,
             roughness: 0.5,
           });
           const card = new THREE.Mesh(cardGeo, cardMat);
           group.add(card);
 
-          const borderGeo = new THREE.BoxGeometry(0.54, 0.84, 0.04);
-          const borderMat = new THREE.MeshBasicMaterial({ color: 0xf2c14e });
-          const border = new THREE.Mesh(borderGeo, borderMat);
-          group.add(border);
-
-          const light = new THREE.PointLight(0xc8102e, 1.2, 4.0);
+          const light = new THREE.PointLight(0xf2c14e, 1.2, 4.0);
           group.add(light);
 
           this.scene.add(group);
           this.charmMeshes.set(c.id, group);
         }
 
-        const bob = Math.sin(Date.now() * 0.006) * 0.2 + 0.8;
+        const spin = Date.now() * 0.003;
+        const bob = Math.sin(spin * 2) * 0.2 + 1.2;
         group.position.set(c.pos[0], c.pos[1] + bob, c.pos[2]);
-        group.rotation.y += 0.03;
+        group.rotation.y = spin;
       }
     }
 
@@ -520,16 +630,13 @@ export class GameScene {
     this.camera.lookAt(playerPos[0], playerPos[1] + 1.2, playerPos[2]);
   }
 
+  render(): void {
+    this.renderer.render(this.scene, this.camera);
+  }
+
   private onResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  render(): void {
-    if (this.cloudsMesh) {
-      this.cloudsMesh.rotation.y += 0.0003;
-    }
-    this.renderer.render(this.scene, this.camera);
   }
 }

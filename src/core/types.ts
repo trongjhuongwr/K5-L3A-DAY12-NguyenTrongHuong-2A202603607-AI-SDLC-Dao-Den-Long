@@ -4,7 +4,15 @@ export interface TuningConfig {
   dash_duration_s: number;
   dash_cooldown_s: number;
   carry_capacity: number;
+  capacity_max: number;
   lantern_cost: number;
+  relight_cost: number;
+  fuel_max: number;
+  fuel_decay_per_s: number;
+  fuel_per_mote: number;
+  low_fuel_threshold: number;
+  drain_per_s: number;
+  win_ratio: number;
   lantern_count_night1: number;
   pickup_radius: number;
   interact_radius: number;
@@ -26,9 +34,12 @@ export interface TuningConfig {
   score: {
     per_mote: number;
     per_lantern: number;
+    relight_lantern: number;
     per_stun: number;
+    per_drain_stun: number;
     per_second_left: number;
     per_flame_left: number;
+    per_lit_lantern: number;
   };
 }
 
@@ -56,6 +67,7 @@ export interface ScenarioData {
     dash_cd_ticks?: number;
     pulse_cd_ticks?: number;
     charm_ticks?: number;
+    successful_lights?: number;
   };
   random_motes?: boolean;
   random_shades?: boolean;
@@ -67,6 +79,7 @@ export interface ScenarioData {
     pos: [number, number, number];
     state?: string;
     state_ticks_left?: number;
+    target_lantern_id?: string;
   }[];
   drifters?: {
     id?: string;
@@ -85,6 +98,8 @@ export interface ScenarioData {
     pos?: [number, number, number];
     deposited?: number;
     lit?: boolean;
+    fuel?: number;
+    ever_lit?: boolean;
   }[];
   time_left_s?: number;
 }
@@ -95,6 +110,8 @@ export interface PlayerState {
   grounded: boolean;
   flames: number;
   carried: number;
+  capacity: number;
+  successful_lights: number;
   facingYawDeg: number;
   invuln_ticks: number;
   dash_cd_ticks: number;
@@ -114,9 +131,19 @@ export interface LanternState {
   pos: [number, number, number];
   lit: boolean;
   deposited: number;
+  fuel: number; // 0 to 100
+  fuel_ticks: number; // 0 to 6000 for exact 1/60 integer arithmetic
+  ever_lit: boolean;
+  relit_count: number;
 }
 
-export type ShadeStateType = "spawning" | "wander" | "chase" | "recoil" | "stunned";
+export type ShadeStateType =
+  | "spawning"
+  | "wander"
+  | "chase"
+  | "recoil"
+  | "stunned"
+  | "drain";
 
 export interface ShadeState {
   id: string;
@@ -127,6 +154,9 @@ export interface ShadeState {
   push_dir: [number, number];
   recoil_dir: [number, number];
   safe_push_ticks_left: number;
+  target_lantern_id?: string;
+  drain_ticks_active: number;
+  was_draining: boolean;
 }
 
 export type DrifterStateType = "idle" | "chase" | "flee" | "removed";
@@ -184,12 +214,16 @@ export interface SnapshotOutput {
     charm_s: number;
     flames: number;
     carried: number;
+    capacity: number;
   };
   lanterns: {
     id: string;
     pos: [number, number, number];
     lit: boolean;
     deposited: number;
+    fuel: number;
+    ever_lit: boolean;
+    relit_count: number;
   }[];
   shades: {
     id: string;
@@ -233,7 +267,10 @@ export interface GameEvent {
     | "drifter_drop"
     | "night_start"
     | "paused"
-    | "resumed";
+    | "resumed"
+    | "refuel"
+    | "lantern_out"
+    | "fuel_drain";
   data: Record<string, unknown>;
 }
 
