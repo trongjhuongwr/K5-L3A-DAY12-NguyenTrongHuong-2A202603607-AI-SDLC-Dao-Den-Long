@@ -22,8 +22,10 @@ npm test
 - **SHIFT**: Lướt nhanh (Dash 14 m/s trong 0.2s, hồi chiêu 1.5s; có Bùa Gió: không hồi chiêu).
 - **E**: Nạp đom đóm vào Đèn Lồng Lớn (trong phạm vi 2.0m).
 - **Q**: Tỏa sáng để xua đuổi và làm choáng Bóng Mực, đuổi Gió Lạc (tốn 3 đom đóm).
-- **ESC / P**: Tạm dừng trò chơi (Pause) & Mở menu Cài đặt.
-- **Chuột (kéo giữ)**: Xoay camera 3D quanh nhân vật (có chỉnh độ nhạy chuột).
+- **Rê chuột (Click khóa chuột)**: Xoay góc nhìn 360° tự do quanh Mây không cần giữ nút chuột (chuẩn game 3D hiện đại).
+- **C**: Căn góc nhìn camera lập tức ra ngay sau lưng Mây.
+- **Cuộn chuột (Scroll wheel)**: Thu phóng khoảng cách camera (zoom gần/xa từ 3.5m đến 14m).
+- **ESC / P**: Tạm dừng trò chơi (Pause), mở menu Cài đặt và nhả chuột.
 
 ## 3. Nội dung 3 Đêm Chơi (Ba Hòn Đảo)
 - **Đêm 1 — Đảo Bến:** Đảo tròn $R=40m$, 5 ngọn Đèn Lồng Lớn, 20 đom đóm ban đầu, Bóng Mực xuất hiện sau 5s.

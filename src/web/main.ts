@@ -29,7 +29,7 @@ const NIGHT_LORES: Record<number, NightLore> = {
   },
   3: {
     title: "ĐÊM 3 — ĐẢO CHUÔNG",
-    quote: '"Tháp chuông đứng sừng sững trên đỉnh cao nhất. Gió giật từng cơn sẽ thổi bạt mọi thứ. Đêm cuối cùng rồi, cố lên con!" — Lời Ông Đăng',
+    quote: '"Tháp chuông đứng sững sững trên đỉnh cao nhất. Gió giật từng cơn sẽ thổi bạt mọi thứ. Đêm cuối cùng rồi, cố lên con!" — Lời Ông Đăng',
     desc: "Nhiệm vụ: Leo qua 3 tầng địa hình, vượt qua gió mạnh và thắp sáng cả 7 ngọn Đèn Lồng để đón Bình Minh.",
   },
 };
@@ -48,16 +48,22 @@ async function initGame(): Promise<void> {
   let sim = new Simulation(tuning, Math.floor(Math.random() * 100000), currentNight);
   gameScene.loadMapGeometry(sim.mapConfig);
 
-  // Mouse sensitivity
-  let mouseSens = 0.4;
+  // Mouse sensitivity & Camera state
+  let mouseSens = 0.5;
   const savedSens = localStorage.getItem("dao_den_long_sens");
   if (savedSens) mouseSens = parseFloat(savedSens);
 
   let camYawDeg = 0;
   let camPitchDeg = 15;
+  let targetCamYawDeg = 0;
+  let targetCamPitchDeg = 15;
+  let camDist = 7.5;
+  let targetCamDist = 7.5;
+
   let isDraggingMouse = false;
   let prevMouseX = 0;
   let prevMouseY = 0;
+  let lastMouseMoveTime = 0;
 
   const keys: Record<string, boolean> = {
     w: false,
@@ -75,42 +81,8 @@ async function initGame(): Promise<void> {
     Escape: false,
     p: false,
     h: false,
+    c: false,
   };
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key in keys) keys[e.key] = true;
-    if (e.key === "Escape" || e.key === "p" || e.key === "P") {
-      togglePause();
-    }
-    if (e.key === "h" || e.key === "H") {
-      toggleTutorial();
-    }
-  });
-
-  window.addEventListener("keyup", (e) => {
-    if (e.key in keys) keys[e.key] = false;
-  });
-
-  canvas.addEventListener("mousedown", (e) => {
-    isDraggingMouse = true;
-    prevMouseX = e.clientX;
-    prevMouseY = e.clientY;
-  });
-
-  window.addEventListener("mouseup", () => {
-    isDraggingMouse = false;
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!isDraggingMouse) return;
-    const dx = e.clientX - prevMouseX;
-    const dy = e.clientY - prevMouseY;
-    prevMouseX = e.clientX;
-    prevMouseY = e.clientY;
-
-    camYawDeg += dx * mouseSens;
-    camPitchDeg = Math.max(-10, Math.min(60, camPitchDeg - dy * mouseSens * 0.75));
-  });
 
   // UI elements
   const flamesBar = document.getElementById("flames-bar")!;
@@ -178,6 +150,100 @@ async function initGame(): Promise<void> {
   const btnResume = document.getElementById("btn-resume")!;
   const btnRestartFromPause = document.getElementById("btn-restart-from-pause")!;
 
+  // Pointer Lock handling helper
+  function requestPointerLock(): void {
+    const isModalActive =
+      introModal.classList.contains("active") ||
+      gameoverModal.classList.contains("active") ||
+      pauseModal.classList.contains("active") ||
+      tutorialModal.classList.contains("active");
+
+    if (!isModalActive && document.pointerLockElement !== canvas) {
+      try {
+        canvas.requestPointerLock();
+      } catch {
+        // Ignore if browser restricts
+      }
+    }
+  }
+
+  function releasePointerLock(): void {
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+  }
+
+  canvas.addEventListener("click", () => {
+    requestPointerLock();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key in keys) keys[e.key] = true;
+    if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+      togglePause();
+    }
+    if (e.key === "h" || e.key === "H") {
+      toggleTutorial();
+    }
+    // Key C: Center camera behind Mây
+    if (e.key === "c" || e.key === "C") {
+      const facingDeg = (character.group.rotation.y * 180) / Math.PI;
+      targetCamYawDeg = facingDeg;
+      targetCamPitchDeg = 15;
+      showToast("📷 Đã căn chỉnh camera sau lưng Mây");
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    if (e.key in keys) keys[e.key] = false;
+  });
+
+  canvas.addEventListener("mousedown", (e) => {
+    if (document.pointerLockElement !== canvas) {
+      isDraggingMouse = true;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    }
+  });
+
+  window.addEventListener("mouseup", () => {
+    isDraggingMouse = false;
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    lastMouseMoveTime = performance.now();
+
+    if (document.pointerLockElement === canvas) {
+      // 1. Pointer Lock mode: Free 360 mouse look without holding any button!
+      targetCamYawDeg += e.movementX * mouseSens * 0.22;
+      targetCamPitchDeg = Math.max(
+        -10,
+        Math.min(60, targetCamPitchDeg - e.movementY * mouseSens * 0.22)
+      );
+    } else if (isDraggingMouse) {
+      // 2. Drag mode fallback if pointer not locked
+      const dx = e.clientX - prevMouseX;
+      const dy = e.clientY - prevMouseY;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+
+      targetCamYawDeg += dx * mouseSens * 0.35;
+      targetCamPitchDeg = Math.max(
+        -10,
+        Math.min(60, targetCamPitchDeg - dy * mouseSens * 0.35)
+      );
+    }
+  });
+
+  // Mouse wheel zoom
+  window.addEventListener(
+    "wheel",
+    (e) => {
+      targetCamDist = Math.max(3.5, Math.min(14.0, targetCamDist + e.deltaY * 0.006));
+    },
+    { passive: true }
+  );
+
   volSlider.value = String(sounds.volume * 100);
   volSlider.addEventListener("input", () => {
     sounds.setVolume(parseFloat(volSlider.value) / 100);
@@ -195,6 +261,7 @@ async function initGame(): Promise<void> {
     introQuote.textContent = lore.quote;
     introDesc.textContent = lore.desc;
     introModal.classList.add("active");
+    releasePointerLock();
   }
 
   function startNight(night: number): void {
@@ -205,17 +272,27 @@ async function initGame(): Promise<void> {
     introModal.classList.remove("active");
     gameoverModal.classList.remove("active");
     tutorialModal.classList.remove("active");
+
+    camYawDeg = 0;
+    targetCamYawDeg = 0;
+    camPitchDeg = 15;
+    targetCamPitchDeg = 15;
+    camDist = 7.5;
+    targetCamDist = 7.5;
   }
 
   btnStartNight.addEventListener("click", () => {
     introModal.classList.remove("active");
+    requestPointerLock();
   });
 
   function toggleTutorial(): void {
     if (tutorialModal.classList.contains("active")) {
       tutorialModal.classList.remove("active");
+      requestPointerLock();
     } else {
       tutorialModal.classList.add("active");
+      releasePointerLock();
     }
   }
 
@@ -223,9 +300,11 @@ async function initGame(): Promise<void> {
   btnHowToPlay.addEventListener("click", () => {
     introModal.classList.remove("active");
     tutorialModal.classList.add("active");
+    releasePointerLock();
   });
   btnCloseTutorial.addEventListener("click", () => {
     tutorialModal.classList.remove("active");
+    requestPointerLock();
   });
 
   function togglePause(): void {
@@ -233,10 +312,12 @@ async function initGame(): Promise<void> {
       sim.applyInputFrame({ tick: sim.tick, pause: true });
       sim.step();
       pauseModal.classList.add("active");
+      releasePointerLock();
     } else if (sim.state === "paused") {
       sim.applyInputFrame({ tick: sim.tick, pause: true });
       sim.step();
       pauseModal.classList.remove("active");
+      requestPointerLock();
     }
   }
 
@@ -247,10 +328,12 @@ async function initGame(): Promise<void> {
   btnRestartFromPause.addEventListener("click", () => {
     pauseModal.classList.remove("active");
     startNight(currentNight);
+    requestPointerLock();
   });
 
   btnRetryNight.addEventListener("click", () => {
     startNight(currentNight);
+    requestPointerLock();
   });
 
   btnNextAction.addEventListener("click", () => {
@@ -542,6 +625,7 @@ async function initGame(): Promise<void> {
         const result = ev.data.result;
         const reason = ev.data.reason;
         gameoverModal.classList.add("active");
+        releasePointerLock();
 
         if (result === "won") {
           totalCampaignScore += sim.score;
@@ -592,7 +676,6 @@ async function initGame(): Promise<void> {
         let mz = 0;
         if (keys.w || keys.ArrowUp) mz += 1;
         if (keys.s || keys.ArrowDown) mz -= 1;
-        // User feedback: Invert A and D so A moves left on screen, D moves right on screen
         if (keys.a || keys.ArrowLeft) mx += 1;
         if (keys.d || keys.ArrowRight) mx -= 1;
 
@@ -611,6 +694,15 @@ async function initGame(): Promise<void> {
       }
     }
 
+    // Camera Smoothing & Damping
+    let yawDiff = targetCamYawDeg - camYawDeg;
+    while (yawDiff < -180) yawDiff += 360;
+    while (yawDiff > 180) yawDiff -= 360;
+    camYawDeg += yawDiff * Math.min(1.0, (delta / 1000) * 18.0);
+
+    camPitchDeg += (targetCamPitchDeg - camPitchDeg) * Math.min(1.0, (delta / 1000) * 18.0);
+    camDist += (targetCamDist - camDist) * Math.min(1.0, (delta / 1000) * 12.0);
+
     // Sync Character Mesh Position
     character.group.position.x = sim.player.pos[0];
     character.group.position.y = sim.player.pos[1];
@@ -626,6 +718,15 @@ async function initGame(): Promise<void> {
       while (diff < -Math.PI) diff += Math.PI * 2;
       while (diff > Math.PI) diff -= Math.PI * 2;
       character.group.rotation.y += diff * Math.min(1.0, (delta / 1000) * 12.0);
+    }
+
+    // Soft Camera Auto-Follow behind Mây when running forward without touching mouse for 500ms
+    if ((keys.w || keys.ArrowUp) && hSpeed > 0.5 && now - lastMouseMoveTime > 500) {
+      const facingDeg = (character.group.rotation.y * 180) / Math.PI;
+      let autoDiff = facingDeg - targetCamYawDeg;
+      while (autoDiff < -180) autoDiff += 360;
+      while (autoDiff > 180) autoDiff -= 360;
+      targetCamYawDeg += autoDiff * Math.min(1.0, (delta / 1000) * 1.6);
     }
 
     const isMoving =
@@ -647,8 +748,8 @@ async function initGame(): Promise<void> {
     gameScene.syncDrifters(sim.drifters);
     gameScene.syncCharms(sim.charms);
 
-    // Update Camera
-    gameScene.updateCamera(sim.player.pos, camYawDeg, camPitchDeg);
+    // Update Camera with dynamic distance
+    gameScene.updateCamera(sim.player.pos, camYawDeg, camPitchDeg, camDist);
 
     // Update HUD
     updateHUD();
