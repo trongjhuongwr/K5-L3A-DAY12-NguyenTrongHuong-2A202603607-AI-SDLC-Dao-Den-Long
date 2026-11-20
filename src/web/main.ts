@@ -59,12 +59,16 @@ async function initGame(): Promise<void> {
   const savedSens = localStorage.getItem("dao_den_long_sens");
   if (savedSens) mouseSens = parseFloat(savedSens);
 
+  // Camera Mode: "third-person" (default) or "top-down" (fixed isometric)
+  let cameraMode: "third-person" | "top-down" =
+    (localStorage.getItem("dao_den_long_cam_mode") as any) || "third-person";
+
   let camYawDeg = 0;
-  let camPitchDeg = 15;
+  let camPitchDeg = cameraMode === "top-down" ? 52 : 18;
   let targetCamYawDeg = 0;
-  let targetCamPitchDeg = 15;
-  let camDist = 7.5;
-  let targetCamDist = 7.5;
+  let targetCamPitchDeg = cameraMode === "top-down" ? 52 : 18;
+  let camDist = cameraMode === "top-down" ? 18.0 : 7.5;
+  let targetCamDist = cameraMode === "top-down" ? 18.0 : 7.5;
 
   let isDraggingMouse = false;
   let prevMouseX = 0;
@@ -198,7 +202,66 @@ async function initGame(): Promise<void> {
   const keybindModal = document.getElementById("keybind-modal")!;
   const leaderboardModal = document.getElementById("leaderboard-modal")!;
 
-  // Pointer Lock handling helper
+  // Camera Mode & Pointer Lock Controls
+  const btnToggleCamMode = document.getElementById("btn-toggle-cam-mode");
+  const btnCenterCam = document.getElementById("btn-center-cam");
+  const btnTogglePointerLock = document.getElementById("btn-toggle-pointer-lock");
+
+  function updateCamModeUI(): void {
+    if (btnToggleCamMode) {
+      btnToggleCamMode.textContent =
+        cameraMode === "top-down" ? "🗺️ Top-Down (Cố định)" : "🎥 Góc nhìn 3D";
+    }
+  }
+  updateCamModeUI();
+
+  function toggleCameraMode(): void {
+    if (cameraMode === "third-person") {
+      cameraMode = "top-down";
+      targetCamYawDeg = 0;
+      targetCamPitchDeg = 52;
+      targetCamDist = 18.0;
+      showToast("🗺️ Đã đổi: Góc nhìn Top-Down (Cố định, cực dễ điều khiển!)");
+    } else {
+      cameraMode = "third-person";
+      const facingDeg = (character.group.rotation.y * 180) / Math.PI;
+      targetCamYawDeg = facingDeg;
+      targetCamPitchDeg = 18;
+      targetCamDist = 7.5;
+      showToast("🎥 Đã đổi: Góc nhìn 3D Thứ ba (Xoay tự do)");
+    }
+    localStorage.setItem("dao_den_long_cam_mode", cameraMode);
+    updateCamModeUI();
+  }
+
+  function centerCameraBehind(): void {
+    if (cameraMode === "top-down") {
+      targetCamYawDeg = 0;
+      targetCamPitchDeg = 52;
+      showToast("🗺️ Đã căn giữa góc nhìn Top-Down");
+    } else {
+      const facingDeg = (character.group.rotation.y * 180) / Math.PI;
+      targetCamYawDeg = facingDeg;
+      targetCamPitchDeg = 18;
+      showToast("📷 Đã căn chỉnh camera sau lưng Mây");
+    }
+  }
+
+  btnToggleCamMode?.addEventListener("click", () => toggleCameraMode());
+  btnCenterCam?.addEventListener("click", () => centerCameraBehind());
+
+  // Opt-in Pointer Lock
+  function togglePointerLock(): void {
+    if (document.pointerLockElement === canvas) {
+      releasePointerLock();
+      showToast("🔓 Đã mở khóa chuột");
+    } else {
+      requestPointerLock();
+      showToast("🔒 Đã khóa chuột (Nhấn ESC để thoát)");
+    }
+  }
+  btnTogglePointerLock?.addEventListener("click", () => togglePointerLock());
+
   function requestPointerLock(): void {
     const isModalActive =
       introModal.classList.contains("active") ||
@@ -211,9 +274,7 @@ async function initGame(): Promise<void> {
     if (!isModalActive && document.pointerLockElement !== canvas) {
       try {
         canvas.requestPointerLock();
-      } catch {
-        // Ignore if browser restricts
-      }
+      } catch {}
     }
   }
 
@@ -222,10 +283,6 @@ async function initGame(): Promise<void> {
       document.exitPointerLock();
     }
   }
-
-  canvas.addEventListener("click", () => {
-    requestPointerLock();
-  });
 
   let listeningAction: ActionName | null = null;
   const keybindWarning = document.getElementById("keybind-warning");
@@ -272,10 +329,11 @@ async function initGame(): Promise<void> {
     }
     // Key C: Center camera behind Mây
     if (e.key === "c" || e.key === "C") {
-      const facingDeg = (character.group.rotation.y * 180) / Math.PI;
-      targetCamYawDeg = facingDeg;
-      targetCamPitchDeg = 15;
-      showToast("📷 Đã căn chỉnh camera sau lưng Mây");
+      centerCameraBehind();
+    }
+    // Key V: Toggle camera mode (3D Third-person / Top-down Isometric)
+    if (e.key === "v" || e.key === "V") {
+      toggleCameraMode();
     }
   });
 
@@ -283,12 +341,18 @@ async function initGame(): Promise<void> {
     keysPressed.delete(e.key);
   });
 
+  // Smooth mouse drag to look (left or right mouse button)
   canvas.addEventListener("mousedown", (e) => {
-    if (document.pointerLockElement !== canvas) {
+    if (cameraMode !== "top-down" && document.pointerLockElement !== canvas) {
       isDraggingMouse = true;
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
     }
+  });
+
+  // Prevent right-click context menu on canvas for smooth right-click camera rotation
+  canvas.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
   });
 
   window.addEventListener("mouseup", () => {
@@ -298,24 +362,30 @@ async function initGame(): Promise<void> {
   window.addEventListener("mousemove", (e) => {
     lastMouseMoveTime = performance.now();
 
+    if (cameraMode === "top-down") {
+      targetCamYawDeg = 0;
+      targetCamPitchDeg = 52;
+      return;
+    }
+
     if (document.pointerLockElement === canvas) {
-      // 1. Pointer Lock mode: Free 360 mouse look without holding any button!
+      // 1. Pointer Lock mode: Free 360 look
       targetCamYawDeg += e.movementX * mouseSens * 0.22;
       targetCamPitchDeg = Math.max(
-        -10,
-        Math.min(60, targetCamPitchDeg - e.movementY * mouseSens * 0.22)
+        -5,
+        Math.min(65, targetCamPitchDeg - e.movementY * mouseSens * 0.22)
       );
     } else if (isDraggingMouse) {
-      // 2. Drag mode fallback if pointer not locked
+      // 2. Drag mode: smooth camera turn when dragging mouse
       const dx = e.clientX - prevMouseX;
       const dy = e.clientY - prevMouseY;
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
 
-      targetCamYawDeg += dx * mouseSens * 0.35;
+      targetCamYawDeg += dx * mouseSens * 0.28;
       targetCamPitchDeg = Math.max(
-        -10,
-        Math.min(60, targetCamPitchDeg - dy * mouseSens * 0.35)
+        -5,
+        Math.min(65, targetCamPitchDeg - dy * mouseSens * 0.28)
       );
     }
   });
@@ -324,7 +394,9 @@ async function initGame(): Promise<void> {
   window.addEventListener(
     "wheel",
     (e) => {
-      targetCamDist = Math.max(3.5, Math.min(14.0, targetCamDist + e.deltaY * 0.006));
+      const minDist = cameraMode === "top-down" ? 10.0 : 3.5;
+      const maxDist = cameraMode === "top-down" ? 28.0 : 16.0;
+      targetCamDist = Math.max(minDist, Math.min(maxDist, targetCamDist + e.deltaY * 0.008));
     },
     { passive: true }
   );
@@ -564,21 +636,19 @@ async function initGame(): Promise<void> {
 
     camYawDeg = 0;
     targetCamYawDeg = 0;
-    camPitchDeg = 15;
-    targetCamPitchDeg = 15;
-    camDist = 7.5;
-    targetCamDist = 7.5;
+    camPitchDeg = cameraMode === "top-down" ? 52 : 18;
+    targetCamPitchDeg = cameraMode === "top-down" ? 52 : 18;
+    camDist = cameraMode === "top-down" ? 18.0 : 7.5;
+    targetCamDist = cameraMode === "top-down" ? 18.0 : 7.5;
   }
 
   btnStartNight.addEventListener("click", () => {
     introModal.classList.remove("active");
-    requestPointerLock();
   });
 
   function toggleTutorial(): void {
     if (tutorialModal.classList.contains("active")) {
       tutorialModal.classList.remove("active");
-      requestPointerLock();
     } else {
       tutorialModal.classList.add("active");
       releasePointerLock();
@@ -606,9 +676,13 @@ async function initGame(): Promise<void> {
       sim.applyInputFrame({ tick: sim.tick, pause: true });
       sim.step();
       pauseModal.classList.remove("active");
-      requestPointerLock();
     }
   }
+
+  const btnPauseOpen = document.getElementById("btn-pause-open");
+  btnPauseOpen?.addEventListener("click", () => {
+    togglePause();
+  });
 
   btnResume.addEventListener("click", () => {
     togglePause();
@@ -617,12 +691,10 @@ async function initGame(): Promise<void> {
   btnRestartFromPause.addEventListener("click", () => {
     pauseModal.classList.remove("active");
     startNight(currentNight);
-    requestPointerLock();
   });
 
   btnRetryNight.addEventListener("click", () => {
     startNight(currentNight);
-    requestPointerLock();
   });
 
   btnNextAction.addEventListener("click", () => {
@@ -1006,13 +1078,13 @@ async function initGame(): Promise<void> {
         let mz = 0;
         if (isActionActive("forward")) mz += 1;
         if (isActionActive("backward")) mz -= 1;
-        if (isActionActive("left")) mx += 1;
-        if (isActionActive("right")) mx -= 1;
+        if (isActionActive("left")) mx -= 1; // Fixed: Left is -X
+        if (isActionActive("right")) mx += 1; // Fixed: Right is +X
 
         sim.applyInputFrame({
           tick: sim.tick,
           move: [mx, mz],
-          cam_yaw_deg: camYawDeg,
+          cam_yaw_deg: cameraMode === "top-down" ? 0 : camYawDeg,
           interact: isActionActive("interact"),
           pulse: isActionActive("pulse"),
           jump: isActionActive("jump"),
@@ -1054,7 +1126,7 @@ async function initGame(): Promise<void> {
 
     if (arrowTop && arrowBottom && arrowLeft && arrowRight) {
       let nearestThreat: (typeof sim.shades)[0] | null = null;
-      let minThreatDist = 18.0;
+      let minThreatDist = 9.0;
       for (const s of sim.shades) {
         if (s.state === "chase" || s.state === "drain") {
           const d = Math.hypot(s.pos[0] - sim.player.pos[0], s.pos[2] - sim.player.pos[2]);
@@ -1069,7 +1141,8 @@ async function initGame(): Promise<void> {
         const dx = nearestThreat.pos[0] - sim.player.pos[0];
         const dz = nearestThreat.pos[2] - sim.player.pos[2];
         const worldAngle = Math.atan2(dx, dz);
-        const camYawRad = (camYawDeg * Math.PI) / 180;
+        const activeCamYaw = cameraMode === "top-down" ? 0 : camYawDeg;
+        const camYawRad = (activeCamYaw * Math.PI) / 180;
         let relAngle = worldAngle - camYawRad;
         while (relAngle < -Math.PI) relAngle += Math.PI * 2;
         while (relAngle > Math.PI) relAngle -= Math.PI * 2;
@@ -1084,6 +1157,12 @@ async function initGame(): Promise<void> {
         arrowLeft.style.display = "none";
         arrowRight.style.display = "none";
       }
+    }
+
+    // Camera Mode overrides
+    if (cameraMode === "top-down") {
+      targetCamYawDeg = 0;
+      targetCamPitchDeg = 52;
     }
 
     // Camera Smoothing & Damping
@@ -1109,16 +1188,7 @@ async function initGame(): Promise<void> {
       let diff = targetYaw - character.group.rotation.y;
       while (diff < -Math.PI) diff += Math.PI * 2;
       while (diff > Math.PI) diff -= Math.PI * 2;
-      character.group.rotation.y += diff * Math.min(1.0, (delta / 1000) * 12.0);
-    }
-
-    // Soft Camera Auto-Follow behind Mây when running forward without touching mouse for 500ms
-    if (isActionActive("forward") && hSpeed > 0.5 && now - lastMouseMoveTime > 500) {
-      const facingDeg = (character.group.rotation.y * 180) / Math.PI;
-      let autoDiff = facingDeg - targetCamYawDeg;
-      while (autoDiff < -180) autoDiff += 360;
-      while (autoDiff > 180) autoDiff -= 360;
-      targetCamYawDeg += autoDiff * Math.min(1.0, (delta / 1000) * 1.6);
+      character.group.rotation.y += diff * Math.min(1.0, (delta / 1000) * 14.0);
     }
 
     const isMoving =

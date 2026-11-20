@@ -22,6 +22,7 @@ export class GameScene {
       core: THREE.Mesh;
       beacon: THREE.Mesh;
       safeRing: THREE.Mesh;
+      billboard: THREE.Group;
       fuelBarBg: THREE.Mesh;
       fuelBar: THREE.Mesh;
     }
@@ -318,8 +319,11 @@ export class GameScene {
         beacon.position.y = 25.0;
         group.add(beacon);
 
-        // Fuel Gauge Bar (Plane facing camera)
-        const barBgGeo = new THREE.PlaneGeometry(1.5, 0.2);
+        // Fuel Gauge Bar Billboard (facing camera)
+        const billboard = new THREE.Group();
+        billboard.position.y = 4.4;
+
+        const barBgGeo = new THREE.PlaneGeometry(1.5, 0.22);
         const barBgMat = new THREE.MeshBasicMaterial({
           color: 0x111424,
           side: THREE.DoubleSide,
@@ -327,38 +331,38 @@ export class GameScene {
           opacity: 0.85,
         });
         const fuelBarBg = new THREE.Mesh(barBgGeo, barBgMat);
-        fuelBarBg.position.y = 4.4;
-        group.add(fuelBarBg);
+        billboard.add(fuelBarBg);
 
-        const barGeo = new THREE.PlaneGeometry(1.44, 0.14);
+        const barGeo = new THREE.PlaneGeometry(1.44, 0.16);
         const barMat = new THREE.MeshBasicMaterial({
           color: 0x20e377,
           side: THREE.DoubleSide,
         });
         const fuelBar = new THREE.Mesh(barGeo, barMat);
-        fuelBar.position.set(0, 4.4, 0.01);
-        group.add(fuelBar);
+        fuelBar.position.z = 0.01;
+        billboard.add(fuelBar);
+
+        group.add(billboard);
 
         this.scene.add(group);
-        entry = { group, light, core, beacon, safeRing, fuelBarBg, fuelBar };
+        entry = { group, light, core, beacon, safeRing, billboard, fuelBarBg, fuelBar };
         this.lanternMeshes.set(l.id, entry);
       }
 
       entry.group.position.set(l.pos[0], l.pos[1], l.pos[2]);
 
-      // Orient fuel bars to face camera
-      entry.fuelBarBg.quaternion.copy(this.camera.quaternion);
-      entry.fuelBar.quaternion.copy(this.camera.quaternion);
+      // Orient billboard directly to face camera
+      entry.billboard.quaternion.copy(this.camera.quaternion);
 
       const beaconMat = entry.beacon.material as THREE.MeshBasicMaterial;
 
       if (l.lit) {
         entry.group.scale.y = 1.0;
-        entry.fuelBarBg.visible = true;
-        entry.fuelBar.visible = true;
+        entry.billboard.visible = true;
 
         const fuelRatio = Math.max(0.01, l.fuel / 100.0);
         entry.fuelBar.scale.x = fuelRatio;
+        entry.fuelBar.position.x = -0.72 + 0.72 * fuelRatio;
 
         const barMat = entry.fuelBar.material as THREE.MeshBasicMaterial;
         if (l.fuel >= 50) {
@@ -391,8 +395,7 @@ export class GameScene {
       } else {
         // Unlit: 20% collapsed in Y
         entry.group.scale.y = 0.8;
-        entry.fuelBarBg.visible = false;
-        entry.fuelBar.visible = false;
+        entry.billboard.visible = false;
         (entry.safeRing.material as THREE.MeshBasicMaterial).opacity = 0;
 
         const cost = l.ever_lit ? 5.0 : 10.0;

@@ -20,16 +20,19 @@ npm test
 
 ---
 
-## 2. Hướng dẫn Điều khiển & Tùy biến Phím
-- **W / A / S / D** hoặc **Phím mũi tên**: Di chuyển nhân vật Mây (6.0 m/s; có Bùa Gió: 7.2 m/s). *(Có thể đổi phím trong Menu Pause)*
+## 2. Hướng dẫn Điều khiển & Hệ thống Camera Đa chế độ
+- **W / A / S / D** hoặc **Phím mũi tên**: Di chuyển nhân vật Mây (W: Tiến, S: Lùi, A: Sang trái, D: Sang phải). *(Có thể đổi phím trong Menu Pause)*
 - **SPACE**: Nhảy ($V_y = 7.0$ m/s, trọng lực $-20$ m/s²). *(Có thể đổi phím)*
 - **SHIFT**: Lướt nhanh (Dash 14 m/s trong 0.2s, hồi chiêu 1.5s; có Bùa Gió: không hồi chiêu). *(Có thể đổi phím)*
 - **E**: Tương tác với Đèn Lồng (Nạp đom đóm thắp sáng hoặc châm dầu). *(Có thể đổi phím)*
 - **Q**: Tỏa Sáng để xua đuổi và làm choáng Bóng Mực trong 5m, đuổi Gió Lạc (tốn 3 đom đóm). *(Có thể đổi phím)*
-- **Rê chuột (Click khóa chuột)**: Xoay góc nhìn 360° tự do quanh Mây không cần giữ nút chuột (chuẩn game 3D hiện đại).
-- **C**: Căn góc nhìn camera lập tức ra ngay sau lưng Mây.
-- **Cuộn chuột (Scroll wheel)**: Thu phóng khoảng cách camera (zoom gần/xa từ 3.5m đến 14m).
-- **ESC / P**: Tạm dừng trò chơi (Pause), mở menu Cài đặt và Hỗ trợ tiếp cận.
+- **V hoặc Nút trên HUD**: Chuyển đổi giữa 2 chế độ camera:
+  - **🗺️ Top-Down Isometric (Cố định):** Góc nhìn từ trên cao xuống bao quát toàn bộ hòn đảo, WASD điều khiển trực tiếp 4 hướng (Lên, Xuống, Trái, Phải), không xoay camera, chống chóng mặt tối đa và cực kỳ dễ chơi!
+  - **🎥 Góc nhìn 3D Thứ ba:** Góc nhìn 3D tự do bám theo nhân vật Mây.
+- **Giữ chuột (Chuột trái/phải)**: Xoay góc nhìn 360° tự do quanh Mây mượt mà (không làm ẩn chuột ngoài ý muốn, có thể bấm nút "Khóa chuột" nếu thích trải nghiệm góc nhìn FPS).
+- **C hoặc Nút trên HUD**: Căn góc nhìn camera ngay lập tức ra sau lưng Mây.
+- **Cuộn chuột (Scroll wheel)**: Thu phóng khoảng cách camera (zoom gần/xa).
+- **ESC / P hoặc Nút trên HUD**: Tạm dừng trò chơi (Pause), mở menu Cài đặt, Bảng xếp hạng và Đổi phím.
 
 ---
 
