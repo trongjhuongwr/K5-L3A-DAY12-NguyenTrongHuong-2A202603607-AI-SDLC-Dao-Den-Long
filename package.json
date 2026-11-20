@@ -1,0 +1,25 @@
+{
+  "name": "dao-den-long",
+  "version": "1.0.0",
+  "description": "Game 3D Đảo Đèn Lồng - Phase 1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && npm run build:headless",
+    "build:headless": "esbuild src/headless.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/headless.js",
+    "preview": "vite preview",
+    "headless": "node dist/headless.js",
+    "test": "node tests/verify.js",
+    "test:headless": "npm run build:headless && node dist/headless.js --seed 42 --night 1 --ticks 180 --out docs/proof/phase-1/test-default.jsonl"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/three": "^0.170.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.1"
+  }
+}

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đảo Đèn Lồng - Đêm 1: Đảo Bến</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #050510;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .hud-card {
+      background: rgba(15, 12, 35, 0.75);
+      border: 1px solid rgba(255, 180, 80, 0.3);
+      border-radius: 12px;
+      padding: 12px 20px;
+      color: #fff;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .flames-container {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .flame-icon {
+      font-size: 24px;
+      filter: drop-shadow(0 0 6px #ff7700);
+      transition: transform 0.2s;
+    }
+    .flame-icon.lost {
+      filter: grayscale(1) opacity(0.3);
+      transform: scale(0.8);
+    }
+    .hud-title {
+      font-size: 13px;
+      color: #ffc272;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+    .hud-value {
+      font-size: 22px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .hud-center {
+      text-align: center;
+    }
+    .hud-timer {
+      font-size: 28px;
+      font-weight: bold;
+      color: #ffe082;
+      text-shadow: 0 0 10px rgba(255, 200, 50, 0.5);
+    }
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .controls-hint {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.6;
+    }
+    .key-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-weight: bold;
+      color: #ffdd99;
+      margin: 0 2px;
+    }
+    /* Overlay Modal for Win/Lose */
+    #modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 5, 15, 0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease, visibility 0.5s;
+    }
+    #modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-box {
+      background: linear-gradient(135deg, #1b1734 0%, #0d0b1a 100%);
+      border: 2px solid #ffaa33;
+      border-radius: 20px;
+      padding: 36px 48px;
+      text-align: center;
+      max-width: 480px;
+      box-shadow: 0 0 50px rgba(255, 150, 0, 0.3);
+      color: white;
+      transform: translateY(20px);
+      transition: transform 0.4s ease;
+    }
+    #modal-overlay.active .modal-box {
+      transform: translateY(0);
+    }
+    .modal-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+    .modal-title.won {
+      color: #ffbb33;
+      text-shadow: 0 0 15px rgba(255, 180, 0, 0.8);
+    }
+    .modal-title.lost {
+      color: #c97eff;
+      text-shadow: 0 0 15px rgba(180, 50, 255, 0.8);
+    }
+    .modal-msg {
+      font-size: 16px;
+      color: #ddd;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .modal-score {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffeb3b;
+      margin-bottom: 28px;
+    }
+    .btn-replay {
+      background: linear-gradient(90deg, #ff8c00, #ffaa00);
+      color: #1a0800;
+      border: none;
+      border-radius: 30px;
+      padding: 14px 36px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-replay:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 22px rgba(255, 170, 0, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div class="hud-header">
+      <div class="hud-card">
+        <div class="hud-title">Ngọn lửa sinh mệnh</div>
+        <div class="flames-container" id="flames-bar">
+          <span class="flame-icon">🔥</span>
+          <span class="flame-icon">🔥</span>
+          <span class="flame-icon">🔥</span>
+        </div>
+      </div>
+
+      <div class="hud-card hud-center">
+        <div class="hud-title">Thời gian còn lại</div>
+        <div class="hud-timer" id="timer-val">03:00</div>
+      </div>
+
+      <div class="hud-card">
+        <div class="hud-title">Điểm số</div>
+        <div class="hud-value" id="score-val">0</div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="hud-card">
+        <div class="hud-title">Đèn Lồng Lớn đã thắp</div>
+        <div class="hud-value" id="lanterns-val">0 / 5</div>
+        <div style="font-size: 13px; color: #ffb74d; margin-top: 4px;" id="motes-carried">
+          Đom đóm mang theo: 0 / 10
+        </div>
+      </div>
+
+      <div class="hud-card controls-hint">
+        <div><span class="key-badge">W A S D</span> / Phím mũi tên : Di chuyển</div>
+        <div><span class="key-badge">E</span> : Nạp ánh sáng vào Đèn Lồng Lớn</div>
+        <div><span class="key-badge">Q</span> : Tỏa sáng xua đuổi Bóng Mực (tốn 2 đom đóm)</div>
+        <div><span class="key-badge">Chuột</span> : Giữ chuột kéo để xoay camera</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title" id="modal-title">CHIẾN THẮNG!</div>
+      <div class="modal-msg" id="modal-msg">Mây đã thắp sáng cả 5 Đèn Lồng Lớn! Ánh sáng ấm áp đã xua tan màn sương đen trên Đảo Bến.</div>
+      <div class="modal-score" id="modal-score">Tổng điểm: 1250</div>
+      <button class="btn-replay" id="btn-replay">Chơi lại Đêm 1</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/web/main.ts"></script>
+</body>
+</html>
