@@ -346,25 +346,8 @@ export class Simulation {
           this.player.pos[2] - shade.pos[2]
         );
         const shadeStep = this.tuning.shade_speed * dt;
-        let sx = shade.pos[0] + cdx * shadeStep;
-        let sz = shade.pos[2] + cdz * shadeStep;
-
-        // Check safe zones around lit lanterns
-        for (const lantern of litLanterns) {
-          const dToLantern = distXZ([sx, 0, sz], lantern.pos);
-          if (dToLantern < this.tuning.safe_radius) {
-            // Cannot enter safe radius, push out to safe_radius edge
-            const [outX, outZ] = normalizeXZ(
-              sx - lantern.pos[0],
-              sz - lantern.pos[2]
-            );
-            sx = lantern.pos[0] + outX * this.tuning.safe_radius;
-            sz = lantern.pos[2] + outZ * this.tuning.safe_radius;
-          }
-        }
-
-        shade.pos[0] = round3(sx);
-        shade.pos[2] = round3(sz);
+        shade.pos[0] = round3(shade.pos[0] + cdx * shadeStep);
+        shade.pos[2] = round3(shade.pos[2] + cdz * shadeStep);
 
         // Check hit player
         const dToPlayer = distXZ(shade.pos, this.player.pos);
@@ -388,6 +371,19 @@ export class Simulation {
               },
             });
           }
+        }
+      }
+
+      // Enforce safe zones around all lit lanterns (for all shades, chase or stunned)
+      for (const lantern of litLanterns) {
+        const dToLantern = distXZ(shade.pos, lantern.pos);
+        if (dToLantern < this.tuning.safe_radius) {
+          const [outX, outZ] = normalizeXZ(
+            shade.pos[0] - lantern.pos[0],
+            shade.pos[2] - lantern.pos[2]
+          );
+          shade.pos[0] = round3(lantern.pos[0] + outX * this.tuning.safe_radius);
+          shade.pos[2] = round3(lantern.pos[2] + outZ * this.tuning.safe_radius);
         }
       }
     }
