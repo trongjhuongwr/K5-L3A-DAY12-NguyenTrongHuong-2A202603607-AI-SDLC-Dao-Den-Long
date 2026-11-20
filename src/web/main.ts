@@ -160,8 +160,12 @@ async function initGame(): Promise<void> {
   let lastToastTime = 0;
   function showToast(msg: string): void {
     const now = performance.now();
-    if (now - lastToastTime < 300) return;
+    if (now - lastToastTime < 350) return;
     lastToastTime = now;
+
+    while (toastContainer.children.length >= 2) {
+      toastContainer.removeChild(toastContainer.firstChild!);
+    }
 
     const toast = document.createElement("div");
     toast.className = "toast-msg";
@@ -171,7 +175,7 @@ async function initGame(): Promise<void> {
       if (toast.parentNode === toastContainer) {
         toastContainer.removeChild(toast);
       }
-    }, 2400);
+    }, 2200);
   }
 
   // Modals
@@ -935,7 +939,7 @@ async function initGame(): Promise<void> {
     scoreVal.textContent = String(totalCampaignScore + sim.score);
     const litCount = sim.lanterns.filter((l) => l.lit).length;
     const minRequired = Math.ceil(sim.lanterns.length * tuning.win_ratio);
-    lanternsProgress.textContent = `Đèn sáng: ${litCount} / ${sim.lanterns.length} (Cần ≥ ${minRequired})`;
+    lanternsProgress.textContent = `${litCount}/${sim.lanterns.length} (≥${minRequired})`;
 
     // 4. Mote bar (Dynamic capacity: 10 to 20 cells)
     motesCountText.textContent = `${sim.player.carried}/${sim.player.capacity}`;
@@ -1028,7 +1032,7 @@ async function initGame(): Promise<void> {
     for (const ev of events) {
       if (ev.name === "mote_picked") {
         sounds.playMotePicked();
-        showToast(`+1 Đom đóm (${sim.player.carried}/${sim.player.capacity})`);
+        // Mote count updates quietly in the HUD, no annoying toast spam
       } else if (ev.name === "deposit") {
         sounds.playDeposit();
         showToast(`Đã nạp ${ev.data.amount} đom đóm vào Đèn Lồng ${ev.data.lantern_id}!`);
@@ -1051,7 +1055,7 @@ async function initGame(): Promise<void> {
         showToast(`💫 Tỏa Sáng! Làm choáng Bóng Mực trong 5m!`);
       } else if (ev.name === "dash") {
         sounds.playDash();
-        showToast(`💨 Lướt nhanh!`);
+        // Dash has audio effect, no toast clutter
       } else if (ev.name === "charm_picked") {
         sounds.playCharmPicked();
         showToast(`⚡ Nhặt được Bùa Gió! Hồi chiêu tức thì!`);

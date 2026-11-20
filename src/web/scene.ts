@@ -29,14 +29,15 @@ export class GameScene {
   > = new Map();
 
   public moteMeshes: Map<string, THREE.Group> = new Map();
-  public shadeMeshes: Map<string, { group: THREE.Group; eye: THREE.Mesh; aura: THREE.PointLight }> = new Map();
+  public shadeMeshes: Map<string, { group: THREE.Group; eye: THREE.Mesh }> = new Map();
   public drifterMeshes: Map<string, THREE.Group> = new Map();
   public charmMeshes: Map<string, THREE.Group> = new Map();
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x131a38);
-    this.scene.fog = new THREE.Fog(0x162248, 45, 175);
+    this.scene.background = new THREE.Color(0x0e172e);
+    // Remove murky fog so the island, stars, lanterns and fireflies are crystal clear
+    this.scene.fog = null;
 
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -51,20 +52,19 @@ export class GameScene {
       powerPreference: "high-performance",
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
-    // Ambient night light: clear mystical blue (never pitch black)
-    this.ambientLight = new THREE.AmbientLight(0x6082ba, 1.25);
+    // Crisp, vivid ambient night lighting
+    this.ambientLight = new THREE.AmbientLight(0x7090c5, 1.35);
     this.scene.add(this.ambientLight);
 
-    // Moonlight: warm directional illumination
-    this.moonLight = new THREE.DirectionalLight(0xdbe9ff, 1.4);
+    // Warm moonlight
+    this.moonLight = new THREE.DirectionalLight(0xe5f0ff, 1.45);
     this.moonLight.position.set(35, 65, 30);
     this.scene.add(this.moonLight);
 
-    // Hemisphere light: sky bounce + ground glow for rich 3D depth
-    const hemiLight = new THREE.HemisphereLight(0x759ccd, 0x244234, 0.75);
+    // Hemisphere light: gentle sky/ground bounce
+    const hemiLight = new THREE.HemisphereLight(0x84aadc, 0x244234, 0.8);
     this.scene.add(hemiLight);
 
     this.islandGroup = new THREE.Group();
@@ -230,13 +230,11 @@ export class GameScene {
   }
 
   private buildSeaOfClouds(): THREE.InstancedMesh {
-    const count = 300;
-    const cloudGeo = new THREE.DodecahedronGeometry(14, 1);
+    const count = 48;
+    const cloudGeo = new THREE.DodecahedronGeometry(18, 0);
     const cloudMat = new THREE.MeshStandardMaterial({
-      color: 0x12384a,
+      color: 0x0c1b2c,
       roughness: 0.95,
-      transparent: true,
-      opacity: 0.85,
     });
 
     const mesh = new THREE.InstancedMesh(cloudGeo, cloudMat, count);
@@ -244,12 +242,12 @@ export class GameScene {
 
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2 + Math.random() * 0.2;
-      const dist = 45 + Math.random() * 110;
-      const y = -14 + (Math.random() - 0.5) * 8;
+      const dist = 55 + Math.random() * 85;
+      const y = -18 + (Math.random() - 0.5) * 6;
 
       dummy.position.set(Math.cos(angle) * dist, y, Math.sin(angle) * dist);
-      const s = 1.2 + Math.random() * 1.8;
-      dummy.scale.set(s * 1.5, s * 0.6, s * 1.5);
+      const s = 1.3 + Math.random() * 1.6;
+      dummy.scale.set(s * 1.6, s * 0.5, s * 1.6);
       dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
       dummy.updateMatrix();
 
@@ -443,7 +441,7 @@ export class GameScene {
     this.moonLight.intensity = 1.3 + 0.5 * (litCount / total);
   }
 
-  // Sync Motes
+  // Sync Motes (Lightweight self-illuminating meshes, zero PointLight cost)
   syncMotes(motes: MoteState[]): void {
     const activeIds = new Set<string>();
 
@@ -454,15 +452,23 @@ export class GameScene {
         if (!meshGroup) {
           meshGroup = new THREE.Group();
 
-          const sphereGeo = new THREE.SphereGeometry(0.32, 14, 14);
+          // Bright glowing core
+          const sphereGeo = new THREE.SphereGeometry(0.3, 10, 10);
           const sphereMat = new THREE.MeshBasicMaterial({
-            color: m.kind === "dropped" ? 0xff4433 : 0xfff3a0,
+            color: m.kind === "dropped" ? 0xff4433 : 0xffea78,
           });
           const sphere = new THREE.Mesh(sphereGeo, sphereMat);
           meshGroup.add(sphere);
 
-          const light = new THREE.PointLight(0xffea78, 1.8, 7.0);
-          meshGroup.add(light);
+          // Soft translucent outer halo for ethereal firefly look
+          const haloGeo = new THREE.SphereGeometry(0.55, 10, 10);
+          const haloMat = new THREE.MeshBasicMaterial({
+            color: m.kind === "dropped" ? 0xff3322 : 0xfffaab,
+            transparent: true,
+            opacity: 0.35,
+          });
+          const halo = new THREE.Mesh(haloGeo, haloMat);
+          meshGroup.add(halo);
 
           this.scene.add(meshGroup);
           this.moteMeshes.set(m.id, meshGroup);
@@ -481,7 +487,7 @@ export class GameScene {
     }
   }
 
-  // Sync Shades (includes Colorblind mode & Drain animation)
+  // Sync Shades (includes Colorblind mode & Drain animation, zero PointLight cost)
   syncShades(shades: ShadeState[]): void {
     const activeIds = new Set<string>();
     const baseColor = this.colorblindMode ? 0x00b3ff : 0x7a3cff;
@@ -503,43 +509,28 @@ export class GameScene {
         body.position.y = 0.8;
         group.add(body);
 
-        const eyeGeo = new THREE.SphereGeometry(0.14, 8, 8);
+        const eyeGeo = new THREE.SphereGeometry(0.18, 8, 8);
         const eyeMat = new THREE.MeshBasicMaterial({ color: baseColor });
         const eye = new THREE.Mesh(eyeGeo, eyeMat);
         eye.position.set(0, 0.9, 0.6);
         group.add(eye);
 
-        const aura = new THREE.PointLight(baseColor, 1.2, 4.5);
-        aura.position.y = 0.8;
-        group.add(aura);
-
         this.scene.add(group);
-        entry = { group, eye, aura };
+        entry = { group, eye };
         this.shadeMeshes.set(s.id, entry);
       }
 
       const bob = Math.sin(Date.now() * 0.008 + s.pos[0]) * 0.15;
       entry.group.position.set(s.pos[0], s.pos[1] + bob, s.pos[2]);
 
+      const eyeMat = entry.eye.material as THREE.MeshBasicMaterial;
       if (s.state === "stunned") {
-        entry.eye.material = new THREE.MeshBasicMaterial({ color: 0x3a3450 });
-        entry.aura.color.setHex(0x3a3450);
-        entry.aura.intensity = 0.3;
+        eyeMat.color.setHex(0x3a3450);
       } else if (s.state === "drain") {
-        // Drain animation: pulsing rapidly
         const drainBlink = Math.sin(Date.now() * 0.02) > 0;
-        const col = drainBlink ? 0xff5a5f : baseColor;
-        entry.eye.material = new THREE.MeshBasicMaterial({ color: col });
-        entry.aura.color.setHex(col);
-        entry.aura.intensity = 1.6;
-      } else if (s.state === "spawning") {
-        entry.eye.material = new THREE.MeshBasicMaterial({ color: baseColor });
-        entry.aura.color.setHex(baseColor);
-        entry.aura.intensity = 0.4;
+        eyeMat.color.setHex(drainBlink ? 0xff5a5f : baseColor);
       } else {
-        entry.eye.material = new THREE.MeshBasicMaterial({ color: baseColor });
-        entry.aura.color.setHex(baseColor);
-        entry.aura.intensity = 1.2;
+        eyeMat.color.setHex(baseColor);
       }
     }
 
@@ -568,13 +559,12 @@ export class GameScene {
             roughness: 0.4,
             transparent: true,
             opacity: 0.85,
+            emissive: 0x3a4b60,
+            emissiveIntensity: 0.4,
           });
           const ribbon = new THREE.Mesh(ribbonGeo, ribbonMat);
           ribbon.rotation.x = Math.PI / 2;
           group.add(ribbon);
-
-          const light = new THREE.PointLight(0x8fa3b8, 1.0, 5.0);
-          group.add(light);
 
           this.scene.add(group);
           this.drifterMeshes.set(d.id, group);
@@ -608,12 +598,11 @@ export class GameScene {
           const cardMat = new THREE.MeshStandardMaterial({
             color: 0xc8102e,
             roughness: 0.5,
+            emissive: 0xff3344,
+            emissiveIntensity: 0.5,
           });
           const card = new THREE.Mesh(cardGeo, cardMat);
           group.add(card);
-
-          const light = new THREE.PointLight(0xf2c14e, 1.2, 4.0);
-          group.add(light);
 
           this.scene.add(group);
           this.charmMeshes.set(c.id, group);
