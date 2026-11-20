@@ -92,9 +92,13 @@ export class Simulation {
 
     this.timeLeftS = scenario?.time_left_s ?? this.mapConfig.duration_s;
 
+    // Default spawn pos: Night 3 starts at (0, 0, -15) facing +Z; Night 1 & 2 at (0, 0, 0)
+    const defaultPos: [number, number, number] =
+      night === 3 ? [0, 0, -15] : [0, 0, 0];
+
     // Initialize player
     this.player = {
-      pos: scenario?.player?.pos ? [...scenario.player.pos] : [0, 0, 0],
+      pos: scenario?.player?.pos ? [...scenario.player.pos] : [...defaultPos],
       vel: [0, 0, 0],
       grounded: true,
       flames: scenario?.player?.flames ?? tuning.flames,
@@ -135,14 +139,6 @@ export class Simulation {
 
     // Setup scenario or defaults
     this.setupScenario(scenario);
-
-    // Emit night_start event at beginning
-    this.events.push({
-      type: "event",
-      tick: 0,
-      name: "night_start",
-      data: { night: this.night },
-    });
   }
 
   private setupScenario(scenario?: ScenarioData): void {
@@ -257,6 +253,16 @@ export class Simulation {
     const stepEvents: GameEvent[] = [];
     const dt = 1.0 / 60.0;
 
+    // Emit night_start at tick 1 (first step execution)
+    if (nextTick === 1) {
+      stepEvents.push({
+        type: "event",
+        tick: 1,
+        name: "night_start",
+        data: { night: this.night },
+      });
+    }
+
     // Detect rising edges
     const pauseTriggered = this.currentPause && !this.prevPause;
     const interactTriggered = this.currentInteract && !this.prevInteract;
@@ -365,9 +371,11 @@ export class Simulation {
     }
 
     // STEP 3: Di chuyển Mây (nhảy, lướt, bục nhảy, gió) & Kiểm tra rơi khỏi đảo
+    const defaultSpawnPos: [number, number, number] =
+      this.night === 3 ? [0, 0, -15] : [0, 0, 0];
     if (this.player.fall_respawn_wait_ticks === 0 && this.player.pos[1] < -10.0) {
-      // Finished 60 tick wait: respawn at (0,0,0)
-      this.player.pos = [0, 0, 0];
+      // Finished 60 tick wait: respawn at start pos
+      this.player.pos = [...defaultSpawnPos];
       this.player.vel = [0, 0, 0];
       this.player.grounded = true;
       this.player.invuln_ticks = 90;
@@ -724,7 +732,11 @@ export class Simulation {
     // STEP 8: Di chuyển Bóng Mực và Gió Lạc
     // Move Shades
     for (const shade of this.shades) {
-      if (shade.state === "stunned") {
+      if (shade.state === "spawning") {
+        if (shade.state_ticks_left <= 0) {
+          shade.state = "wander";
+        }
+      } else if (shade.state === "stunned") {
         if (shade.push_ticks_left > 0) {
           const pushStep = this.tuning.pulse_push_m / 15.0;
           shade.pos[0] = round3(shade.pos[0] + shade.push_dir[0] * pushStep);
@@ -926,8 +938,8 @@ export class Simulation {
             this.shades.push({
               id: sId,
               pos: [pt[0], pt[1], pt[2]],
-              state: "wander",
-              state_ticks_left: 0,
+              state: "spawning",
+              state_ticks_left: 60, // 1.0s spawning duration
               push_ticks_left: 0,
               push_dir: [1, 0],
               recoil_dir: [0, 0],

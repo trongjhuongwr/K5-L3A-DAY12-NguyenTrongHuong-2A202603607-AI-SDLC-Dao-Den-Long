@@ -52,7 +52,18 @@ node dist/headless.js --seed 42 --night 2 --ticks 180 --out docs/proof/phase-2/t
 node dist/headless.js --seed 42 --night 3 --ticks 180 --out docs/proof/phase-2/test-night3.jsonl --snapshot-every 20
 ```
 
-## 6. Sáng tạo của tôi (Creative Additions)
+## 6. Giải trình Thiết kế & Tham số (Tuning Rationales)
+Tuân thủ đầy đủ phản hồi định hướng từ Giảng viên & Hội đồng:
+- **Kiểu Camera:** Sử dụng góc nhìn thứ ba 3D (Third-person view) với khả năng xoay tự do 360° quanh nhân vật Mây (hỗ trợ chế độ khóa chuột Pointer Lock và phím `C` căn góc sau lưng, cuộn chuột thu phóng). Phía headless tuân thủ 100% công thức xoay vector `move` theo góc `cam_yaw_deg`.
+- **Chi phí thắp đèn (`lantern_cost = 10`):** Mỗi đèn yêu cầu 10 đom đóm, vừa đúng bằng sức chứa tối đa của túi (`carry_capacity = 10`), khuyến khích người chơi nhặt đầy một túi rồi nạp một lượt hoặc nạp tích lũy từng đợt tùy tình huống.
+- **Chi phí Tỏa Sáng (`pulse_cost = 3`):** Đủ rẻ để người chơi kích hoạt giải cứu bản thân khi bị Bóng Mực dồn ép (với 10 đom đóm có thể kích hoạt tối đa 3 lần), nhưng đủ đắt để người chơi phải cân nhắc chiến thuật vì mỗi lần tỏa sáng sẽ làm chậm tiến độ tích lũy để thắp đèn lồng.
+- **Hiệu ứng Tỏa Sáng (`pulse_radius = 5.0m`, `pulse_stun_s = 2.0s`):** Bán kính 5.0m đủ bao quát mọi kẻ địch đang áp sát trong cự ly nguy hiểm, choáng 2.0 giây (120 tick) và đẩy lùi 4m ngang cho phép người chơi kịp thời thoát thân hoặc nhặt lại các đom đóm bị rơi.
+- **Thời gian sinh Bóng Mực (`spawning = 60 ticks / 1.0s`):** Khi sinh tự nhiên từ sương đêm, Bóng Mực có 1.0s ở trạng thái `spawning` mờ dần xuất hiện, không gây sát thương, sau đó chuyển sang `wander`. Bóng Mực do kịch bản (scenario) dựng sẵn bắt đầu ngay ở trạng thái `wander`.
+- **Điểm xuất phát:** Đêm 1 và Đêm 2 tại `(0, 0, 0)` nhìn về `+Z`. Đêm 3 tại `(0, 0, -15)` nhìn về `+Z` (đặt Mây ở tầng thấp nhất nhìn về trung tâm tháp chuông). Khi rơi khỏi đảo sẽ hồi sinh tại đúng điểm xuất phát của Đêm đó.
+- **Định dạng `invuln`:** Boolean (`true`/`false`) trong snapshot định kỳ; số tick bất tử chỉ xuất hiện trong scenario (`invuln_ticks`).
+- **Sự kiện `night_start`:** Được phát ở bước thực thi đầu tiên mang `tick = 1` (tick 0 là snapshot khởi tạo trước mọi bước xử lý).
+
+## 7. Sáng tạo của tôi (Creative Additions)
 - **Cốt truyện & Lời dặn Ông Đăng:** Mỗi đêm chơi đều có lời nhắn nhủ dẫn dắt giàu cảm xúc từ người giữ đèn tiền bối.
 - **Mô hình Mây 3D sống động:** Nhân vật áo lam với chiếc khăn đỏ, đội nón lá treo lồng đèn nhỏ phát sáng ấm áp đung đưa, hoạt ảnh bước chân đung đưa tay chân và tự động xoay mượt mà theo hướng di chuyển.
 - **Cột sáng Beacon dẫn đường:** Mỗi ngọn Đèn Lồng Lớn chiếu một cột sáng ấm áp cao 45m lên bầu trời đêm, giúp người chơi dễ dàng định hướng vị trí đèn từ bất kỳ đâu trên đảo. Khi thắp sáng, cột sáng chuyển thành ánh sáng xanh rực rỡ và kích hoạt vùng an toàn 6m.
