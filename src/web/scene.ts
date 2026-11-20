@@ -9,7 +9,7 @@ export class GameScene {
 
   private ambientLight: THREE.AmbientLight;
   private moonLight: THREE.DirectionalLight;
-  private cloudsMesh: THREE.InstancedMesh;
+  private cloudsMesh: any;
   private islandGroup: THREE.Group;
 
   public colorblindMode: boolean = false;
@@ -43,7 +43,7 @@ export class GameScene {
       60,
       window.innerWidth / window.innerHeight,
       0.1,
-      300
+      500
     );
 
     this.renderer = new THREE.WebGLRenderer({
@@ -221,42 +221,26 @@ export class GameScene {
     starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     const starMat = new THREE.PointsMaterial({
       color: 0xffffff,
-      size: 1.2,
+      size: 1.8,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.95,
     });
     const starPoints = new THREE.Points(starGeo, starMat);
     this.scene.add(starPoints);
   }
 
-  private buildSeaOfClouds(): THREE.InstancedMesh {
-    const count = 48;
-    const cloudGeo = new THREE.DodecahedronGeometry(18, 0);
-    const cloudMat = new THREE.MeshStandardMaterial({
-      color: 0x0c1b2c,
-      roughness: 0.95,
+  private buildSeaOfClouds(): any {
+    // Smooth calm reflective night sea beneath the floating archipelago
+    const seaGeo = new THREE.CylinderGeometry(260, 260, 2, 64);
+    const seaMat = new THREE.MeshStandardMaterial({
+      color: 0x060f1c,
+      roughness: 0.35,
+      metalness: 0.15,
     });
-
-    const mesh = new THREE.InstancedMesh(cloudGeo, cloudMat, count);
-    const dummy = new THREE.Object3D();
-
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.2;
-      const dist = 55 + Math.random() * 85;
-      const y = -18 + (Math.random() - 0.5) * 6;
-
-      dummy.position.set(Math.cos(angle) * dist, y, Math.sin(angle) * dist);
-      const s = 1.3 + Math.random() * 1.6;
-      dummy.scale.set(s * 1.6, s * 0.5, s * 1.6);
-      dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
-      dummy.updateMatrix();
-
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-
-    mesh.instanceMatrix.needsUpdate = true;
-    this.scene.add(mesh);
-    return mesh;
+    const sea = new THREE.Mesh(seaGeo, seaMat);
+    sea.position.y = -3.8;
+    this.scene.add(sea);
+    return sea;
   }
 
   // Sync Lanterns (includes Phase 3 Fuel bar, 1Hz blinking, 20% collapsed when unlit)

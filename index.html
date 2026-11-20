@@ -26,15 +26,9 @@
     }
     #hud {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 14px 18px;
+      overflow: hidden;
     }
 
     /* TOP STATUS BAR */
@@ -53,13 +47,13 @@
     .hud-top-bar {
       display: flex;
       align-items: center;
-      gap: 14px;
-      background: rgba(10, 16, 38, 0.85);
+      gap: 12px;
+      background: rgba(10, 16, 38, 0.88);
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(242, 193, 78, 0.45);
+      border: 1px solid rgba(242, 193, 78, 0.5);
       border-radius: 28px;
-      padding: 6px 18px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      padding: 6px 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
     }
     .hud-pill-section {
       display: flex;
@@ -68,8 +62,8 @@
     }
     .hud-divider {
       width: 1px;
-      height: 16px;
-      background: rgba(255, 255, 255, 0.18);
+      height: 15px;
+      background: rgba(255, 255, 255, 0.2);
     }
     .hud-night-badge {
       font-size: 11px;
@@ -78,10 +72,10 @@
       letter-spacing: 0.5px;
     }
     .hud-timer {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 800;
       color: #FFE58A;
-      min-width: 52px;
+      min-width: 48px;
       text-align: center;
     }
     .hud-timer.urgent {
@@ -89,7 +83,7 @@
       animation: blink 0.8s infinite alternate;
     }
     .hud-stat-text {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       color: #F5F1E6;
     }
@@ -99,7 +93,7 @@
       align-items: center;
     }
     .flame-icon {
-      font-size: 18px;
+      font-size: 17px;
       filter: drop-shadow(0 0 5px #ff7700);
       transition: transform 0.2s, filter 0.2s;
     }
@@ -113,14 +107,14 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(14, 22, 50, 0.82);
+      background: rgba(14, 22, 50, 0.85);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 20px;
       padding: 4px 14px;
       font-size: 12px;
       color: #FFE58A;
-      max-width: 460px;
+      max-width: 440px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
     }
     .quest-icon {
@@ -146,16 +140,16 @@
       right: 18px;
       z-index: 10;
       pointer-events: auto;
-      background: rgba(10, 16, 36, 0.85);
+      background: rgba(10, 16, 36, 0.88);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(242, 193, 78, 0.4);
+      border: 1px solid rgba(242, 193, 78, 0.45);
       border-radius: 50%;
       padding: 3px;
       box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
     }
     #minimap-canvas {
-      width: 110px;
-      height: 110px;
+      width: 100px;
+      height: 100px;
       border-radius: 50%;
       background: #090e24;
       display: block;
@@ -186,7 +180,7 @@
     /* Floating Toast Notifications */
     .toast-container {
       position: absolute;
-      top: 80px;
+      top: 75px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -219,19 +213,24 @@
       100% { opacity: 0.5; transform: scale(1.08); }
     }
 
-    /* BOTTOM HUD */
+    /* PINNED BOTTOM HUD */
     .hud-bottom {
+      position: absolute;
+      bottom: 16px;
+      left: 18px;
+      right: 18px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      width: 100%;
+      pointer-events: none;
+      z-index: 10;
     }
 
     /* Mote Pouch (Bottom-Left) */
     .hud-mote-pouch {
-      background: rgba(10, 16, 36, 0.85);
+      background: rgba(10, 16, 36, 0.88);
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(242, 193, 78, 0.4);
+      border: 1px solid rgba(242, 193, 78, 0.45);
       border-radius: 14px;
       padding: 8px 14px;
       pointer-events: auto;
@@ -281,7 +280,7 @@
       gap: 6px;
     }
     .hud-control-btn {
-      background: rgba(14, 20, 48, 0.85);
+      background: rgba(14, 20, 48, 0.88);
       border: 1px solid rgba(242, 193, 78, 0.45);
       color: #FFE58A;
       border-radius: 16px;
@@ -293,7 +292,7 @@
       transition: all 0.2s;
     }
     .hud-control-btn:hover {
-      background: rgba(242, 193, 78, 0.2);
+      background: rgba(242, 193, 78, 0.25);
       border-color: #F2C14E;
       transform: translateY(-1px);
     }
@@ -341,7 +340,7 @@
       bottom: 85px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(14, 22, 48, 0.92);
+      background: rgba(14, 22, 48, 0.94);
       border: 1.5px solid #F2C14E;
       border-radius: 24px;
       padding: 7px 22px;
@@ -452,14 +451,17 @@
       background: linear-gradient(135deg, #182046 0%, #0E1430 100%);
       border: 2px solid #F2C14E;
       border-radius: 20px;
-      padding: 28px 38px;
+      padding: 22px 30px;
       text-align: center;
-      max-width: 560px;
+      max-width: 540px;
+      width: 90%;
       box-shadow: 0 0 50px rgba(242, 193, 78, 0.35);
       transform: translateY(20px);
       transition: transform 0.3s ease;
-      max-height: 90vh;
+      max-height: 88vh;
       overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(242, 193, 78, 0.4) transparent;
     }
     .overlay-modal.active .modal-box {
       transform: translateY(0);
@@ -660,75 +662,74 @@
     }
     .menu-box {
       text-align: center;
-      max-width: 500px;
+      max-width: 440px;
       width: 90%;
-      padding: 38px 26px;
-      background: rgba(14, 20, 48, 0.85);
+      max-height: 94vh;
+      padding: 22px 24px;
+      background: rgba(14, 20, 48, 0.9);
       border: 2px solid rgba(242, 193, 78, 0.65);
-      border-radius: 24px;
-      box-shadow: 0 0 60px rgba(242, 193, 78, 0.35), inset 0 0 25px rgba(242, 193, 78, 0.1);
-      animation: menuFloat 4s ease-in-out infinite alternate;
-    }
-    @keyframes menuFloat {
-      0% { transform: translateY(0); }
-      100% { transform: translateY(-8px); }
+      border-radius: 20px;
+      box-shadow: 0 0 50px rgba(242, 193, 78, 0.35), inset 0 0 25px rgba(242, 193, 78, 0.1);
+      overflow-y: auto;
+      scrollbar-width: none;
     }
     .menu-logo-icon {
-      font-size: 54px;
-      filter: drop-shadow(0 0 16px rgba(255, 180, 50, 0.85));
-      margin-bottom: 6px;
+      font-size: 38px;
+      filter: drop-shadow(0 0 14px rgba(255, 180, 50, 0.85));
+      margin-bottom: 2px;
     }
     .menu-title {
-      font-size: 38px;
+      font-size: 28px;
       font-weight: 900;
       letter-spacing: 2px;
       color: #FFE58A;
-      text-shadow: 0 0 25px rgba(242, 193, 78, 0.7), 0 2px 4px #000;
-      margin-bottom: 6px;
+      text-shadow: 0 0 20px rgba(242, 193, 78, 0.7), 0 2px 4px #000;
+      margin-bottom: 2px;
     }
     .menu-tagline {
-      font-size: 14px;
+      font-size: 13px;
       color: #C9B48A;
       font-style: italic;
-      margin-bottom: 26px;
-      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      letter-spacing: 0.3px;
     }
     .menu-nav {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
       width: 100%;
-      max-width: 330px;
+      max-width: 320px;
       margin: 0 auto;
     }
     .menu-btn {
       background: linear-gradient(135deg, rgba(242, 193, 78, 0.15) 0%, rgba(255, 179, 71, 0.25) 100%);
       border: 1px solid #F2C14E;
       color: #FFE58A;
-      padding: 12px 20px;
-      font-size: 15px;
+      padding: 10px 18px;
+      font-size: 14px;
       font-weight: bold;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      gap: 8px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
     }
     .menu-btn:hover {
       background: linear-gradient(135deg, #F2C14E 0%, #FFB347 100%);
       color: #0E1430;
-      transform: scale(1.04);
-      box-shadow: 0 6px 25px rgba(242, 193, 78, 0.6);
+      transform: scale(1.03);
+      box-shadow: 0 5px 20px rgba(242, 193, 78, 0.6);
     }
     .menu-btn.primary {
       background: linear-gradient(135deg, #F2C14E 0%, #FFB347 100%);
       color: #0E1430;
-      font-size: 17px;
-      padding: 14px 24px;
-      box-shadow: 0 6px 25px rgba(242, 193, 78, 0.5);
+      font-size: 15px;
+      padding: 12px 20px;
+      box-shadow: 0 5px 22px rgba(242, 193, 78, 0.5);
+    }
     }
     .menu-btn.primary:hover {
       transform: scale(1.06);
@@ -919,12 +920,10 @@
       <div class="modal-quote" id="intro-quote">"Mây à, sương đen đã nuốt hết ánh sáng. Con hãy thu thập đom đóm thắp sáng lại các ngọn Đèn Lồng Lớn." — Lời Ông Đăng</div>
       <div class="modal-msg" id="intro-desc">Nhiệm vụ: Thắp sáng và giữ tối thiểu 3/5 Đèn Lồng sáng tới Bình Minh.</div>
 
-      <div style="background: rgba(242, 193, 78, 0.08); border: 1px solid rgba(242, 193, 78, 0.35); border-radius: 12px; padding: 12px 16px; margin: 12px 0; text-align: left; font-size: 13px; line-height: 1.6;">
-        <div style="font-weight: bold; color: #FFE58A; margin-bottom: 6px;">💡 HƯỚNG DẪN 3 BƯỚC ĐƠN GIẢN:</div>
-        <div>🟡 <strong>Bước 1:</strong> Chạy qua các đốm sáng vàng trên đảo để tự động nhặt đom đóm (tối đa 10 đốm trong túi).</div>
-        <div>🏮 <strong>Bước 2:</strong> Chạy tới các ngọn Đèn Lồng (nhìn cột sáng chiếu lên trời hoặc radar) và nhấn <span class="key-badge">E</span> để nạp ánh sáng.</div>
-        <div>🛢️ <strong>Bước 3:</strong> Đèn sáng sẽ cạn dần dầu (100 → 0)! Khi đèn sắp tắt (&lt; 30%), hãy chạy tới nhấn <span class="key-badge">E</span> để châm thêm dầu bảo vệ đèn không bị Bóng Mực hút.</div>
-        <div style="margin-top: 6px; color: #A0C0B5;">✨ <em>Gợi ý:</em> Bạn có thể nhấn nút <strong>[Top-Down]</strong> (hoặc phím <strong>V</strong>) nếu thích góc nhìn từ trên cao cố định cực kỳ dễ chơi và bao quát!</div>
+      <div style="background: rgba(242, 193, 78, 0.08); border: 1px solid rgba(242, 193, 78, 0.35); border-radius: 12px; padding: 10px 14px; margin: 10px 0; text-align: left; font-size: 12px; line-height: 1.5;">
+        <div>🟡 <strong>1. Nhặt đom đóm:</strong> Chạy lại gần các đốm sáng vàng rải rác trên đảo.</div>
+        <div>🏮 <strong>2. Thắp sáng:</strong> Chạy tới các ngọn Đèn Lồng và nhấn <span class="key-badge">E</span> để nạp ánh sáng.</div>
+        <div>🛢️ <strong>3. Giữ lửa:</strong> Nhấn <span class="key-badge">E</span> châm dầu trước khi đèn tắt (&lt; 30%) để giữ đảo sáng tới Bình Minh!</div>
       </div>
 
       <button class="btn-action" id="btn-start-night">Bắt đầu Đêm</button>
