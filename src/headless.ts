@@ -127,7 +127,7 @@ export function runHeadless(): void {
     }
   }
 
-  const sim = new Simulation(tuning, cliArgs.seed, scenario);
+  const sim = new Simulation(tuning, cliArgs.seed, cliArgs.night, scenario);
   const outLines: string[] = [];
 
   // Snapshot tick 0
