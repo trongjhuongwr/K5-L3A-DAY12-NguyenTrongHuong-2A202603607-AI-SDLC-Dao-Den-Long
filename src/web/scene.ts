@@ -35,8 +35,8 @@ export class GameScene {
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0e1430);
-    this.scene.fog = new THREE.FogExp2(0x1b2350, 0.015);
+    this.scene.background = new THREE.Color(0x131a38);
+    this.scene.fog = new THREE.Fog(0x162248, 45, 175);
 
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -54,20 +54,37 @@ export class GameScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
 
-    this.ambientLight = new THREE.AmbientLight(0x0e1430, 0.2);
+    // Ambient night light: clear mystical blue (never pitch black)
+    this.ambientLight = new THREE.AmbientLight(0x6082ba, 1.25);
     this.scene.add(this.ambientLight);
 
-    this.moonLight = new THREE.DirectionalLight(0x7080b0, 0.5);
-    this.moonLight.position.set(25, 50, 25);
+    // Moonlight: warm directional illumination
+    this.moonLight = new THREE.DirectionalLight(0xdbe9ff, 1.4);
+    this.moonLight.position.set(35, 65, 30);
     this.scene.add(this.moonLight);
+
+    // Hemisphere light: sky bounce + ground glow for rich 3D depth
+    const hemiLight = new THREE.HemisphereLight(0x759ccd, 0x244234, 0.75);
+    this.scene.add(hemiLight);
 
     this.islandGroup = new THREE.Group();
     this.scene.add(this.islandGroup);
 
     this.buildStars();
+    this.buildMoon();
     this.cloudsMesh = this.buildSeaOfClouds();
 
     window.addEventListener("resize", () => this.onResize());
+  }
+
+  private buildMoon(): void {
+    const moonGeo = new THREE.SphereGeometry(6, 24, 24);
+    const moonMat = new THREE.MeshBasicMaterial({
+      color: 0xfff8d6,
+    });
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    moon.position.set(60, 90, 80);
+    this.scene.add(moon);
   }
 
   setColorblindMode(enabled: boolean): void {
@@ -85,16 +102,18 @@ export class GameScene {
     this.charmMeshes.clear();
 
     const grassMat = new THREE.MeshStandardMaterial({
-      color: 0x2f5d50,
-      roughness: 0.9,
+      color: 0x3aa876,
+      roughness: 0.65,
     });
     const woodMat = new THREE.MeshStandardMaterial({
-      color: 0x6b4a2f,
-      roughness: 0.8,
+      color: 0x9c653d,
+      roughness: 0.65,
     });
     const stoneMat = new THREE.MeshStandardMaterial({
-      color: 0xc9b48a,
-      roughness: 0.7,
+      color: 0xecdcb6,
+      roughness: 0.55,
+      emissive: 0x221c10,
+      emissiveIntensity: 0.2,
     });
 
     if (mapConfig.night === 1) {
@@ -420,8 +439,8 @@ export class GameScene {
 
     const litCount = lanterns.filter((l) => l.lit).length;
     const total = Math.max(1, lanterns.length);
-    this.ambientLight.intensity = 0.15 + 0.55 * (litCount / total);
-    this.moonLight.intensity = 0.4 + 0.35 * (litCount / total);
+    this.ambientLight.intensity = 1.1 + 0.45 * (litCount / total);
+    this.moonLight.intensity = 1.3 + 0.5 * (litCount / total);
   }
 
   // Sync Motes
@@ -435,14 +454,14 @@ export class GameScene {
         if (!meshGroup) {
           meshGroup = new THREE.Group();
 
-          const sphereGeo = new THREE.SphereGeometry(0.24, 12, 12);
+          const sphereGeo = new THREE.SphereGeometry(0.32, 14, 14);
           const sphereMat = new THREE.MeshBasicMaterial({
-            color: m.kind === "dropped" ? 0xff5a5f : 0xfff6c2,
+            color: m.kind === "dropped" ? 0xff4433 : 0xfff3a0,
           });
           const sphere = new THREE.Mesh(sphereGeo, sphereMat);
           meshGroup.add(sphere);
 
-          const light = new THREE.PointLight(0xffe58a, 1.0, 4.0);
+          const light = new THREE.PointLight(0xffea78, 1.8, 7.0);
           meshGroup.add(light);
 
           this.scene.add(meshGroup);

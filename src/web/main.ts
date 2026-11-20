@@ -175,6 +175,23 @@ async function initGame(): Promise<void> {
   }
 
   // Modals
+  const hudElement = document.getElementById("hud")!;
+  const mainMenuModal = document.getElementById("main-menu-modal")!;
+  const btnMenuPlay = document.getElementById("btn-menu-play")!;
+  const btnMenuSelectNight = document.getElementById("btn-menu-select-night")!;
+  const btnMenuTutorial = document.getElementById("btn-menu-tutorial")!;
+  const btnMenuLeaderboard = document.getElementById("btn-menu-leaderboard")!;
+  const btnMenuSettings = document.getElementById("btn-menu-settings")!;
+
+  const selectNightModal = document.getElementById("select-night-modal")!;
+  const btnCloseSelectNight = document.getElementById("btn-close-select-night")!;
+  const nightCards = document.querySelectorAll(".night-card");
+
+  const btnPauseToMenu = document.getElementById("btn-pause-to-menu");
+  const btnGameoverToMenu = document.getElementById("btn-gameover-to-menu");
+
+  let isInMainMenu = true;
+
   const introModal = document.getElementById("intro-modal")!;
   const introTitle = document.getElementById("intro-title")!;
   const introQuote = document.getElementById("intro-quote")!;
@@ -264,6 +281,9 @@ async function initGame(): Promise<void> {
 
   function requestPointerLock(): void {
     const isModalActive =
+      isInMainMenu ||
+      mainMenuModal.classList.contains("active") ||
+      selectNightModal.classList.contains("active") ||
       introModal.classList.contains("active") ||
       gameoverModal.classList.contains("active") ||
       pauseModal.classList.contains("active") ||
@@ -319,6 +339,17 @@ async function initGame(): Promise<void> {
       return;
     }
 
+    if (isInMainMenu) {
+      if (e.key === "Escape") {
+        selectNightModal.classList.remove("active");
+        tutorialModal.classList.remove("active");
+        leaderboardModal.classList.remove("active");
+        pauseModal.classList.remove("active");
+        if (keybindModal) keybindModal.classList.remove("active");
+      }
+      return;
+    }
+
     keysPressed.add(e.key);
 
     if (isActionActive("pause") && !listeningAction) {
@@ -343,7 +374,7 @@ async function initGame(): Promise<void> {
 
   // Smooth mouse drag to look (left or right mouse button)
   canvas.addEventListener("mousedown", (e) => {
-    if (cameraMode !== "top-down" && document.pointerLockElement !== canvas) {
+    if (!isInMainMenu && cameraMode !== "top-down" && document.pointerLockElement !== canvas) {
       isDraggingMouse = true;
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
@@ -620,15 +651,19 @@ async function initGame(): Promise<void> {
   }
 
   function startNight(night: number): void {
+    isInMainMenu = false;
     currentNight = night;
     sim = new Simulation(tuning, Math.floor(Math.random() * 100000), currentNight);
     gameScene.loadMapGeometry(sim.mapConfig);
     nightTitle.textContent = `ĐÊM ${currentNight} — ${sim.mapConfig.night === 1 ? "ĐẢO BẾN" : sim.mapConfig.night === 2 ? "ĐẢO CAU" : "ĐẢO CHUÔNG"}`;
+    mainMenuModal.classList.remove("active");
+    selectNightModal.classList.remove("active");
     introModal.classList.remove("active");
     gameoverModal.classList.remove("active");
     tutorialModal.classList.remove("active");
     if (keybindModal) keybindModal.classList.remove("active");
     if (leaderboardModal) leaderboardModal.classList.remove("active");
+    hudElement.style.display = "flex";
 
     warned10s = false;
     warnedWind = false;
@@ -1055,8 +1090,67 @@ async function initGame(): Promise<void> {
     }
   }
 
-  // Initial Night 1 lore modal
-  showNightIntro(1);
+  // Main Menu Setup & Event Listeners
+  hudElement.style.display = "none";
+  mainMenuModal.classList.add("active");
+
+  btnMenuPlay.addEventListener("click", () => {
+    isInMainMenu = false;
+    mainMenuModal.classList.remove("active");
+    hudElement.style.display = "flex";
+    startNight(1);
+    showNightIntro(1);
+  });
+
+  btnMenuSelectNight.addEventListener("click", () => {
+    selectNightModal.classList.add("active");
+  });
+
+  btnCloseSelectNight.addEventListener("click", () => {
+    selectNightModal.classList.remove("active");
+  });
+
+  nightCards.forEach((card) => {
+    card.addEventListener("click", () => {
+      const n = parseInt(card.getAttribute("data-night") || "1");
+      selectNightModal.classList.remove("active");
+      mainMenuModal.classList.remove("active");
+      isInMainMenu = false;
+      hudElement.style.display = "flex";
+      startNight(n);
+      showNightIntro(n);
+    });
+  });
+
+  btnMenuTutorial.addEventListener("click", () => {
+    tutorialModal.classList.add("active");
+  });
+
+  btnMenuLeaderboard.addEventListener("click", () => {
+    renderLeaderboardModal();
+    leaderboardModal.classList.add("active");
+  });
+
+  btnMenuSettings.addEventListener("click", () => {
+    pauseModal.classList.add("active");
+  });
+
+  function returnToMainMenu(): void {
+    isInMainMenu = true;
+    hudElement.style.display = "none";
+    pauseModal.classList.remove("active");
+    gameoverModal.classList.remove("active");
+    introModal.classList.remove("active");
+    tutorialModal.classList.remove("active");
+    selectNightModal.classList.remove("active");
+    if (keybindModal) keybindModal.classList.remove("active");
+    if (leaderboardModal) leaderboardModal.classList.remove("active");
+    mainMenuModal.classList.add("active");
+    releasePointerLock();
+  }
+
+  btnPauseToMenu?.addEventListener("click", returnToMainMenu);
+  btnGameoverToMenu?.addEventListener("click", returnToMainMenu);
 
   // 60Hz tick accumulator
   let lastTime = performance.now();
@@ -1065,6 +1159,19 @@ async function initGame(): Promise<void> {
 
   function gameLoop(now: number): void {
     requestAnimationFrame(gameLoop);
+
+    if (isInMainMenu) {
+      // Cinematic camera orbit around Lantern Island for Main Menu
+      const menuAngle = (now * 0.00018) % (Math.PI * 2);
+      camYawDeg = (menuAngle * 180) / Math.PI;
+      camPitchDeg = 20;
+      camDist = 34.0;
+      gameScene.updateCamera([0, 0, 0], camYawDeg, camPitchDeg, camDist);
+      gameScene.syncLanterns(sim.lanterns);
+      gameScene.syncMotes(sim.motes);
+      gameScene.render();
+      return;
+    }
 
     const delta = Math.min(100, now - lastTime);
     lastTime = now;
@@ -1078,8 +1185,8 @@ async function initGame(): Promise<void> {
         let mz = 0;
         if (isActionActive("forward")) mz += 1;
         if (isActionActive("backward")) mz -= 1;
-        if (isActionActive("left")) mx -= 1; // Fixed: Left is -X
-        if (isActionActive("right")) mx += 1; // Fixed: Right is +X
+        if (isActionActive("left")) mx += 1;
+        if (isActionActive("right")) mx -= 1;
 
         sim.applyInputFrame({
           tick: sim.tick,

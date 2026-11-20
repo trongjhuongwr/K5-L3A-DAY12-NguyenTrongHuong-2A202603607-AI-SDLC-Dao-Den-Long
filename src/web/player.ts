@@ -72,8 +72,8 @@ export class CharacterModel {
     miniLanternGroup.position.set(0.38, 1.2, 0.22);
     this.modelRoot.add(miniLanternGroup);
 
-    // Lantern light source
-    this.lanternLight = new THREE.PointLight(0xffb347, 1.6, 6.0);
+    // Lantern light source (Warm, wide radius around Mây)
+    this.lanternLight = new THREE.PointLight(0xffbe55, 2.5, 14.0);
     this.lanternLight.position.set(0.38, 1.2, 0.22);
     this.modelRoot.add(this.lanternLight);
 
