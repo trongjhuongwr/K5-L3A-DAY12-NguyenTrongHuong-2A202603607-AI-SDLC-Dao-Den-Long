@@ -35,3 +35,20 @@
 
 ### 2. Ước tính Token
 - Giai đoạn lập kế hoạch & thiết kế Phase 2: ~15k tokens.
+
+### 3. Phản hồi Người dùng & Tinh chỉnh UX / Điều khiển
+- **Phản hồi người dùng:** Trải nghiệm ban đầu khó hiểu, chưa rõ cách chơi, lỗi cơ chế di chuyển và đặc biệt phím A và D bị ngược nhau.
+- **Nguyên nhân cốt lõi phát hiện:**
+  1. Camera Three.js đặt ở $-Z$ nhìn về $+Z$, khiến trục $+X$ trong hệ tọa độ không gian nằm bên trái màn hình và $-X$ nằm bên phải màn hình. Việc map phím A (`mx -= 1`) và D (`mx += 1`) trực tiếp đã khiến phím D đi sang trái và phím A đi sang phải màn hình.
+  2. Nhân vật Mây chưa có góc xoay hướng nhìn (`rotation.y`), dẫn đến nhân vật trượt ngang hoặc đi lùi không tự nhiên.
+  3. Mô hình Mây trước đây ghi đè trực tiếp `group.position.y` bằng hàm nhấp nhô `Math.sin(...) * 0.06`, làm triệt tiêu độ cao thật khi nhảy, bục nhảy và địa hình phân tầng.
+  4. Người chơi mới thiếu chỉ dẫn trực quan: không thấy vị trí đèn lồng từ xa, không biết cần bao nhiêu đom đóm, và không có bản đồ radar.
+- **Giải pháp triển khai hoàn thiện:**
+  - Sửa ánh xạ phím A/D trong `src/web/main.ts` để A di chuyển sang trái màn hình và D di chuyển sang phải màn hình một cách chuẩn xác.
+  - Tách `modelRoot` trong `CharacterModel` để bảo toàn tuyệt đối tọa độ $Y$ vật lý khi nhảy, rơi và vượt tầng.
+  - Thêm thuật toán lerp xoay hướng nhân vật mượt mà theo vận tốc di chuyển ngang ($V_x, V_z$).
+  - Thêm Cột sáng Beacon cao 45m tỏa ánh sáng vàng/xanh từ các ngọn Đèn Lồng lên bầu trời.
+  - Thêm Bản đồ Vệ tinh Minimap 2D ở góc trên HUD thể hiện Mây, Đèn, Đom đóm, Quái và Vùng an toàn 6m.
+  - Thêm Hệ thống Nhiệm vụ Quest Tracker hiển thị từng bước cần làm và Toast notifications báo trạng thái.
+  - Thêm Menu Hướng dẫn Chi tiết (phím H hoặc nút [?]).
+  - Giữ vững 100% tính tất định và đạt 15/15 test contract v1.1 trong 0.156s.

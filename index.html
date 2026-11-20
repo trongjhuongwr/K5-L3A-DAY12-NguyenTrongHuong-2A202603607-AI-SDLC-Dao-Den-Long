@@ -34,23 +34,36 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 20px;
+      padding: 18px;
     }
     .hud-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      gap: 12px;
+    }
+    .hud-header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .hud-header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
     }
     .hud-card {
-      background: rgba(14, 20, 48, 0.85);
-      border: 1px solid rgba(242, 193, 78, 0.4);
+      background: rgba(14, 20, 48, 0.88);
+      border: 1px solid rgba(242, 193, 78, 0.45);
       border-radius: 12px;
-      padding: 10px 18px;
+      padding: 10px 16px;
       backdrop-filter: blur(8px);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      pointer-events: auto;
     }
     .hud-title {
-      font-size: 12px;
+      font-size: 11px;
       color: #F2C14E;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -70,7 +83,7 @@
     .flame-icon {
       font-size: 22px;
       filter: drop-shadow(0 0 6px #ff7700);
-      transition: transform 0.2s;
+      transition: transform 0.2s, filter 0.2s;
     }
     .flame-icon.lost {
       filter: grayscale(1) opacity(0.2);
@@ -107,6 +120,116 @@
       background: #FFF6C2;
       box-shadow: 0 0 8px #FFE58A;
     }
+
+    /* Quest Tracker */
+    .quest-tracker {
+      max-width: 280px;
+      background: rgba(18, 25, 58, 0.92);
+      border-left: 4px solid #F2C14E;
+    }
+    .quest-text {
+      font-size: 13px;
+      font-weight: bold;
+      color: #FFE58A;
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+    .quest-subtext {
+      font-size: 11px;
+      color: #A9B5D0;
+      margin-top: 3px;
+      line-height: 1.3;
+    }
+
+    /* Minimap Radar */
+    .minimap-card {
+      padding: 8px;
+      background: rgba(10, 15, 38, 0.9);
+      border: 1px solid rgba(242, 193, 78, 0.5);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #minimap-canvas {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: #090e24;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8);
+    }
+    .minimap-legend {
+      display: flex;
+      gap: 8px;
+      font-size: 10px;
+      color: #A9B5D0;
+      margin-top: 4px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    /* Help button */
+    .help-btn {
+      background: rgba(242, 193, 78, 0.2);
+      border: 1px solid #F2C14E;
+      color: #F2C14E;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .help-btn:hover {
+      background: #F2C14E;
+      color: #0E1430;
+      transform: scale(1.1);
+    }
+
+    /* Floating Toast Notifications */
+    .toast-container {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .toast-msg {
+      background: rgba(14, 20, 48, 0.92);
+      border: 1px solid #F2C14E;
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #FFE58A;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+      animation: toastFade 2.4s forwards;
+    }
+    @keyframes toastFade {
+      0% { opacity: 0; transform: translateY(-10px) scale(0.95); }
+      15% { opacity: 1; transform: translateY(0) scale(1); }
+      75% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-8px) scale(0.95); }
+    }
+
     .hud-bottom {
       display: flex;
       justify-content: space-between;
@@ -128,6 +251,7 @@
       justify-content: center;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
     .skill-key {
       font-size: 11px;
@@ -135,7 +259,7 @@
       color: #FFE58A;
     }
     .skill-name {
-      font-size: 11px;
+      font-size: 10px;
       color: #F5F1E6;
       font-weight: bold;
     }
@@ -145,23 +269,29 @@
       left: 0;
       width: 100%;
       height: 0%;
-      background: rgba(10, 5, 20, 0.75);
+      background: rgba(10, 5, 20, 0.78);
       transition: height 0.05s linear;
     }
+
     .interact-prompt {
       position: absolute;
-      bottom: 120px;
+      bottom: 125px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(200, 16, 46, 0.9);
+      background: rgba(200, 16, 46, 0.95);
       border: 2px solid #F2C14E;
       border-radius: 20px;
       padding: 8px 24px;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       color: #FFF;
       box-shadow: 0 0 20px rgba(242, 193, 78, 0.6);
       display: none;
+      animation: pulseAlert 1.2s infinite alternate;
+    }
+    @keyframes pulseAlert {
+      0% { transform: translateX(-50%) scale(1); }
+      100% { transform: translateX(-50%) scale(1.05); }
     }
     .key-badge {
       display: inline-block;
@@ -173,6 +303,7 @@
       color: #FFE58A;
       margin: 0 2px;
     }
+
     /* Modals & Menus */
     .overlay-modal {
       position: absolute;
@@ -186,8 +317,9 @@
       align-items: center;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.4s ease, visibility 0.4s;
+      transition: opacity 0.35s ease, visibility 0.35s;
       pointer-events: none;
+      z-index: 200;
     }
     .overlay-modal.active {
       opacity: 1;
@@ -198,18 +330,20 @@
       background: linear-gradient(135deg, #182046 0%, #0E1430 100%);
       border: 2px solid #F2C14E;
       border-radius: 20px;
-      padding: 32px 44px;
+      padding: 28px 38px;
       text-align: center;
-      max-width: 520px;
+      max-width: 560px;
       box-shadow: 0 0 50px rgba(242, 193, 78, 0.35);
       transform: translateY(20px);
       transition: transform 0.3s ease;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .overlay-modal.active .modal-box {
       transform: translateY(0);
     }
     .modal-title {
-      font-size: 30px;
+      font-size: 26px;
       font-weight: bold;
       margin-bottom: 12px;
       color: #F2C14E;
@@ -218,13 +352,14 @@
     .modal-quote {
       font-style: italic;
       color: #FFE58A;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       line-height: 1.5;
+      font-size: 14px;
     }
     .modal-msg {
-      font-size: 15px;
+      font-size: 14px;
       color: #E8E2D0;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
       line-height: 1.6;
     }
     .btn-action {
@@ -266,19 +401,47 @@
       margin: 14px 0;
       font-size: 14px;
     }
+    .guide-table {
+      width: 100%;
+      margin: 16px 0;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    .guide-table th, .guide-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .guide-table th {
+      color: #F2C14E;
+    }
   </style>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
 
+  <div class="toast-container" id="toast-container"></div>
+
   <div id="hud">
     <div class="hud-header">
-      <div class="hud-card">
-        <div class="hud-title">Ngọn lửa sinh mệnh</div>
-        <div class="flames-container" id="flames-bar">
-          <span class="flame-icon">🔥</span>
-          <span class="flame-icon">🔥</span>
-          <span class="flame-icon">🔥</span>
+      <div class="hud-header-left">
+        <div class="hud-card">
+          <div class="hud-title">Ngọn lửa sinh mệnh</div>
+          <div class="flames-container" id="flames-bar">
+            <span class="flame-icon">🔥</span>
+            <span class="flame-icon">🔥</span>
+            <span class="flame-icon">🔥</span>
+          </div>
+        </div>
+
+        <!-- Quest Tracker -->
+        <div class="hud-card quest-tracker" id="quest-tracker">
+          <div class="hud-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Mục Tiêu</span>
+            <button id="btn-help-open" class="help-btn" title="Hướng dẫn cách chơi">?</button>
+          </div>
+          <div id="quest-step" class="quest-text">1. Nhặt đom đóm rải rác trên đảo (0/10)</div>
+          <div id="quest-subtext" class="quest-subtext">Đom đóm phát sáng vàng, hãy chạy lại gần</div>
         </div>
       </div>
 
@@ -287,10 +450,23 @@
         <div class="hud-timer" id="timer-val">05:00</div>
       </div>
 
-      <div class="hud-card" style="text-align: right;">
-        <div class="hud-title">Điểm số</div>
-        <div class="hud-value" id="score-val">0</div>
-        <div style="font-size: 12px; color: #FFE58A; margin-top: 2px;" id="lanterns-progress">Đèn: 0 / 5</div>
+      <div class="hud-header-right">
+        <div class="hud-card" style="text-align: right; min-width: 130px;">
+          <div class="hud-title">Điểm số</div>
+          <div class="hud-value" id="score-val">0</div>
+          <div style="font-size: 12px; color: #FFE58A; margin-top: 2px;" id="lanterns-progress">Đèn: 0 / 5</div>
+        </div>
+
+        <!-- Minimap Radar -->
+        <div class="minimap-card">
+          <canvas id="minimap-canvas" width="130" height="130"></canvas>
+          <div class="minimap-legend">
+            <div class="legend-item"><span class="legend-dot" style="background: #20E377;"></span> Mây</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #F2C14E;"></span> Đèn</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #FFF6C2;"></span> Đom đóm</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #A033FF;"></span> Quái</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -331,8 +507,8 @@
 
       <div class="hud-card" style="font-size: 12px; line-height: 1.5;">
         <div><span class="key-badge">W A S D</span> : Di chuyển | <span class="key-badge">SPACE</span> : Nhảy</div>
-        <div><span class="key-badge">SHIFT</span> : Lướt nhanh (14 m/s)</div>
-        <div><span class="key-badge">ESC / P</span> : Tạm dừng & Cài đặt</div>
+        <div><span class="key-badge">SHIFT</span> : Lướt nhanh (14 m/s) | <span class="key-badge">E</span> : Nạp đèn</div>
+        <div><span class="key-badge">ESC / P</span> : Tạm dừng | <span class="key-badge">H</span> : Hướng dẫn</div>
       </div>
     </div>
   </div>
@@ -344,6 +520,68 @@
       <div class="modal-quote" id="intro-quote">"Mây à, sương đen đã nuốt hết ánh sáng. Con hãy thu thập đom đóm thắp sáng lại các ngọn Đèn Lồng Lớn." — Lời Ông Đăng</div>
       <div class="modal-msg" id="intro-desc">Nhiệm vụ: Thắp sáng cả 5 Đèn Lồng Lớn và né tránh Bóng Mực.</div>
       <button class="btn-action" id="btn-start-night">Bắt đầu Đêm</button>
+      <button class="btn-secondary" id="btn-how-to-play">Cách Chơi Chi Tiết</button>
+    </div>
+  </div>
+
+  <!-- Dialog Hướng Dẫn Chi Tiết (Tutorial / How to play) -->
+  <div class="overlay-modal" id="tutorial-modal">
+    <div class="modal-box" style="text-align: left;">
+      <div class="modal-title" style="text-align: center;">HƯỚNG DẪN CÁCH CHƠI</div>
+      <p style="font-size: 13px; line-height: 1.6; margin-bottom: 12px; color: #FFE58A;">
+        Chào mừng đến với <strong>Đảo Đèn Lồng</strong>! Bạn vào vai cô bé <strong>Mây</strong>, người giữ đèn nhỏ tuổi với nhiệm vụ thắp sáng lại các ngọn Đèn Lồng Lớn để xua tan màn sương đen.
+      </p>
+
+      <table class="guide-table">
+        <tr>
+          <th>Thao tác</th>
+          <th>Phím</th>
+          <th>Mô tả</th>
+        </tr>
+        <tr>
+          <td>Di chuyển</td>
+          <td><span class="key-badge">W</span> <span class="key-badge">A</span> <span class="key-badge">S</span> <span class="key-badge">D</span></td>
+          <td>Chạy khắp hòn đảo. Kéo chuột để xoay camera.</td>
+        </tr>
+        <tr>
+          <td>Nhảy</td>
+          <td><span class="key-badge">SPACE</span></td>
+          <td>Nhảy vượt địa hình hoặc bục nhảy.</td>
+        </tr>
+        <tr>
+          <td>Lướt nhanh</td>
+          <td><span class="key-badge">SHIFT</span></td>
+          <td>Lướt tốc độ 14 m/s (hồi chiêu 1.5s), giữ nguyên độ cao.</td>
+        </tr>
+        <tr>
+          <td>Nhặt đom đóm</td>
+          <td><em>Tự động</em></td>
+          <td>Đi lại gần đốm sáng vàng để nhặt (tối đa 10 đốm trong túi).</td>
+        </tr>
+        <tr>
+          <td>Thắp đèn lồng</td>
+          <td><span class="key-badge">E</span></td>
+          <td>Đến gần cột sáng Đèn Lồng và nhấn E để nạp (cần 10 đốm/đèn).</td>
+        </tr>
+        <tr>
+          <td>Tỏa Sáng</td>
+          <td><span class="key-badge">Q</span></td>
+          <td>Tiêu hao 3 đom đóm để xua và làm choáng Bóng Mực trong 5m!</td>
+        </tr>
+        <tr>
+          <td>Bục nhảy (Đêm 2)</td>
+          <td><em>Bước vào</em></td>
+          <td>Tự động phóng người chơi qua hòn đảo đối diện!</td>
+        </tr>
+      </table>
+
+      <div style="background: rgba(242, 193, 78, 0.1); border: 1px solid #F2C14E; border-radius: 8px; padding: 10px; font-size: 12px; margin-bottom: 16px; color: #F5F1E6;">
+        💡 <strong>Mẹo sống còn:</strong> Đèn sau khi thắp sẽ tạo ra <strong>Vùng an toàn 6m</strong> mà Bóng Mực không thể bước vào! Hãy nhìn vào các <strong>cột sáng cao vút</strong> trên trời hoặc xem <strong>Bản đồ vệ tinh</strong> góc trên bên phải để tìm đường.
+      </div>
+
+      <div style="text-align: center;">
+        <button class="btn-action" id="btn-close-tutorial">Đã Hiểu</button>
+      </div>
     </div>
   </div>
 

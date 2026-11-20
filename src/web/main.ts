@@ -74,12 +74,16 @@ async function initGame(): Promise<void> {
     Shift: false,
     Escape: false,
     p: false,
+    h: false,
   };
 
   window.addEventListener("keydown", (e) => {
     if (e.key in keys) keys[e.key] = true;
     if (e.key === "Escape" || e.key === "p" || e.key === "P") {
       togglePause();
+    }
+    if (e.key === "h" || e.key === "H") {
+      toggleTutorial();
     }
   });
 
@@ -122,12 +126,44 @@ async function initGame(): Promise<void> {
   const dashCdOverlay = document.getElementById("dash-cd-overlay")!;
   const pulseCdOverlay = document.getElementById("pulse-cd-overlay")!;
 
+  // Quest Tracker
+  const questStep = document.getElementById("quest-step")!;
+  const questSubtext = document.getElementById("quest-subtext")!;
+
+  // Minimap
+  const minimapCanvas = document.getElementById("minimap-canvas") as HTMLCanvasElement;
+  const minimapCtx = minimapCanvas ? minimapCanvas.getContext("2d") : null;
+
+  // Toast Container
+  const toastContainer = document.getElementById("toast-container")!;
+  let lastToastTime = 0;
+  function showToast(msg: string): void {
+    const now = performance.now();
+    if (now - lastToastTime < 300) return;
+    lastToastTime = now;
+
+    const toast = document.createElement("div");
+    toast.className = "toast-msg";
+    toast.textContent = msg;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      if (toast.parentNode === toastContainer) {
+        toastContainer.removeChild(toast);
+      }
+    }, 2400);
+  }
+
   // Modals
   const introModal = document.getElementById("intro-modal")!;
   const introTitle = document.getElementById("intro-title")!;
   const introQuote = document.getElementById("intro-quote")!;
   const introDesc = document.getElementById("intro-desc")!;
   const btnStartNight = document.getElementById("btn-start-night")!;
+  const btnHowToPlay = document.getElementById("btn-how-to-play")!;
+
+  const tutorialModal = document.getElementById("tutorial-modal")!;
+  const btnHelpOpen = document.getElementById("btn-help-open")!;
+  const btnCloseTutorial = document.getElementById("btn-close-tutorial")!;
 
   const gameoverModal = document.getElementById("gameover-modal")!;
   const modalResultTitle = document.getElementById("modal-result-title")!;
@@ -168,10 +204,28 @@ async function initGame(): Promise<void> {
     nightTitle.textContent = `ĐÊM ${currentNight} — ${sim.mapConfig.night === 1 ? "ĐẢO BẾN" : sim.mapConfig.night === 2 ? "ĐẢO CAU" : "ĐẢO CHUÔNG"}`;
     introModal.classList.remove("active");
     gameoverModal.classList.remove("active");
+    tutorialModal.classList.remove("active");
   }
 
   btnStartNight.addEventListener("click", () => {
     introModal.classList.remove("active");
+  });
+
+  function toggleTutorial(): void {
+    if (tutorialModal.classList.contains("active")) {
+      tutorialModal.classList.remove("active");
+    } else {
+      tutorialModal.classList.add("active");
+    }
+  }
+
+  btnHelpOpen.addEventListener("click", () => toggleTutorial());
+  btnHowToPlay.addEventListener("click", () => {
+    introModal.classList.remove("active");
+    tutorialModal.classList.add("active");
+  });
+  btnCloseTutorial.addEventListener("click", () => {
+    tutorialModal.classList.remove("active");
   });
 
   function togglePause(): void {
@@ -210,6 +264,163 @@ async function initGame(): Promise<void> {
       showNightIntro(1);
     }
   });
+
+  // Render Minimap Radar
+  function renderMinimap(): void {
+    if (!minimapCtx) return;
+    const ctx = minimapCtx;
+    const w = minimapCanvas.width;
+    const h = minimapCanvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Save state
+    ctx.save();
+
+    // Night-specific scale & center
+    let scale = 1.25; // pixels per meter
+    let worldCenterX = 0;
+    let worldCenterZ = 0;
+
+    if (currentNight === 2) {
+      scale = 0.85;
+      worldCenterX = 35;
+    } else {
+      scale = 1.35;
+      worldCenterX = 0;
+    }
+
+    const worldToMap = (wx: number, wz: number): [number, number] => {
+      const mx = cx + (wx - worldCenterX) * scale;
+      const my = cy + (wz - worldCenterZ) * scale;
+      return [mx, my];
+    };
+
+    // Draw Islands
+    ctx.fillStyle = "rgba(47, 93, 80, 0.4)";
+    ctx.strokeStyle = "rgba(201, 180, 138, 0.5)";
+    ctx.lineWidth = 1.5;
+
+    if (currentNight === 1) {
+      const [ix, iy] = worldToMap(0, 0);
+      ctx.beginPath();
+      ctx.arc(ix, iy, 40 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else if (currentNight === 2) {
+      const [iaX, iaY] = worldToMap(0, 0);
+      ctx.beginPath();
+      ctx.arc(iaX, iaY, 28 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      const [ibX, ibY] = worldToMap(70, 0);
+      ctx.beginPath();
+      ctx.arc(ibX, ibY, 28 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Bridge
+      const [bStart, bEnd] = [worldToMap(28, 0), worldToMap(42, 0)];
+      ctx.strokeStyle = "rgba(107, 74, 47, 0.8)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(bStart[0], bStart[1]);
+      ctx.lineTo(bEnd[0], bEnd[1]);
+      ctx.stroke();
+    } else {
+      // Night 3 tiers
+      const [ix, iy] = worldToMap(0, 0);
+      ctx.beginPath();
+      ctx.arc(ix, iy, 42 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(ix, iy, 26 * scale, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(242, 193, 78, 0.3)";
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(ix, iy, 12 * scale, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(242, 193, 78, 0.5)";
+      ctx.stroke();
+    }
+
+    // Safe zones (6m radius) around lit lanterns
+    for (const l of sim.lanterns) {
+      if (l.lit) {
+        const [lx, ly] = worldToMap(l.pos[0], l.pos[2]);
+        ctx.fillStyle = "rgba(242, 193, 78, 0.15)";
+        ctx.beginPath();
+        ctx.arc(lx, ly, 6 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(242, 193, 78, 0.4)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // Motes (small yellow dots)
+    ctx.fillStyle = "#FFF6C2";
+    for (const m of sim.motes) {
+      const [mx, my] = worldToMap(m.pos[0], m.pos[2]);
+      ctx.beginPath();
+      ctx.arc(mx, my, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Lanterns
+    for (const l of sim.lanterns) {
+      const [lx, ly] = worldToMap(l.pos[0], l.pos[2]);
+      if (l.lit) {
+        ctx.fillStyle = "#55FFFF";
+        ctx.beginPath();
+        ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = "#F2C14E";
+        ctx.fillRect(lx - 3, ly - 3, 6, 6);
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(lx - 3, ly - 3, 6, 6);
+      }
+    }
+
+    // Shades (Bóng Mực: purple dots)
+    for (const s of sim.shades) {
+      const [sx, sy] = worldToMap(s.pos[0], s.pos[2]);
+      ctx.fillStyle = s.state === "stunned" ? "#665588" : "#A033FF";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Player (Mây: bright green dot with facing pointer)
+    const [px, py] = worldToMap(sim.player.pos[0], sim.player.pos[2]);
+    ctx.fillStyle = "#20E377";
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Facing direction pointer
+    const facingYaw = character.group.rotation.y;
+    const ptrX = px + Math.sin(facingYaw) * 9;
+    const ptrY = py + Math.cos(facingYaw) * 9;
+    ctx.strokeStyle = "#20E377";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(ptrX, ptrY);
+    ctx.stroke();
+
+    ctx.restore();
+  }
 
   function updateHUD(): void {
     // 1. Flames
@@ -257,48 +468,76 @@ async function initGame(): Promise<void> {
     }
 
     // 6. Skill Cooldown Overlays
-    const dashCdRatio = Math.min(1.0, (sim.player.dash_cd_ticks / 90.0));
+    const dashCdRatio = Math.min(1.0, sim.player.dash_cd_ticks / 90.0);
     dashCdOverlay.style.height = `${dashCdRatio * 100}%`;
 
-    const pulseCdRatio = Math.min(1.0, (sim.player.pulse_cd_ticks / 180.0));
+    const pulseCdRatio = Math.min(1.0, sim.player.pulse_cd_ticks / 180.0);
     pulseCdOverlay.style.height = `${pulseCdRatio * 100}%`;
 
-    // 7. Interact prompt
-    let nearbyUnlit: typeof sim.lanterns[0] | null = null;
+    // 7. Interact prompt & Quest Guidance
+    let nearbyUnlit: (typeof sim.lanterns)[0] | null = null;
+    let nearestUnlitDist = 99999;
     for (const l of sim.lanterns) {
       if (!l.lit) {
         const d = Math.hypot(sim.player.pos[0] - l.pos[0], sim.player.pos[2] - l.pos[2]);
-        if (d <= tuning.interact_radius) {
+        if (d < nearestUnlitDist) nearestUnlitDist = d;
+        if (d <= tuning.interact_radius && !nearbyUnlit) {
           nearbyUnlit = l;
-          break;
         }
       }
     }
+
     if (nearbyUnlit) {
       interactPrompt.style.display = "block";
       interactPrompt.textContent = `E — Nạp ánh sáng (${nearbyUnlit.deposited}/${tuning.lantern_cost})`;
+      questStep.textContent = `2. Nhấn [E] nạp ánh sáng (${nearbyUnlit.deposited}/${tuning.lantern_cost})`;
+      questSubtext.textContent = `Đang mang ${sim.player.carried} đom đóm. Cần tổng 10 để thắp sáng!`;
     } else {
       interactPrompt.style.display = "none";
+
+      if (litCount >= sim.lanterns.length) {
+        questStep.textContent = "✨ Tất cả đèn đã sáng!";
+        questSubtext.textContent = "Bình minh đang thức giấc trên Đảo Đèn Lồng...";
+      } else if (sim.player.carried >= 10) {
+        questStep.textContent = "2. Túi đã đầy (10/10)! Đi tới Đèn Lồng";
+        questSubtext.textContent = "Nhìn các cột sáng cao trên trời để tìm đèn chưa thắp";
+      } else if (sim.player.carried > 0) {
+        questStep.textContent = `1. Thu thập thêm đom đóm (${sim.player.carried}/10)`;
+        questSubtext.textContent = `Đèn gần nhất cách ${Math.round(nearestUnlitDist)}m. Có thể mang nạp bất kỳ lúc nào`;
+      } else {
+        questStep.textContent = `1. Nhặt đom đóm rải rác trên đảo (0/10)`;
+        questSubtext.textContent = "Chạy qua các đốm sáng vàng để tự động nhặt vào túi";
+      }
     }
+
+    // Render Minimap
+    renderMinimap();
   }
 
   function handleEvents(events: ReturnType<typeof sim.step>): void {
     for (const ev of events) {
       if (ev.name === "mote_picked") {
         sounds.playMotePicked();
+        showToast(`+1 Đom đóm (${sim.player.carried}/10)`);
       } else if (ev.name === "deposit") {
         sounds.playDeposit();
+        showToast(`Đã nạp ${ev.data.amount} đom đóm vào Đèn Lồng!`);
       } else if (ev.name === "lantern_lit") {
         sounds.playLanternLit();
+        showToast(`✨ Đèn Lồng đã thắp sáng! Vùng an toàn 6m kích hoạt!`);
       } else if (ev.name === "pulse") {
         sounds.playPulse();
         character.triggerPulseEffect();
+        showToast(`💫 Tỏa Sáng! Làm choáng Bóng Mực trong 5m!`);
       } else if (ev.name === "dash") {
         sounds.playDash();
+        showToast(`💨 Lướt nhanh!`);
       } else if (ev.name === "charm_picked") {
         sounds.playCharmPicked();
+        showToast(`⚡ Nhặt được Bùa Gió! Hồi chiêu tức thì!`);
       } else if (ev.name === "player_hit") {
         sounds.playHit();
+        showToast(`⚠️ Bị Bóng Mực cắn! Mất 1 ngọn lửa & rơi đom đóm!`);
       } else if (ev.name === "game_over") {
         const result = ev.data.result;
         const reason = ev.data.reason;
@@ -353,8 +592,9 @@ async function initGame(): Promise<void> {
         let mz = 0;
         if (keys.w || keys.ArrowUp) mz += 1;
         if (keys.s || keys.ArrowDown) mz -= 1;
-        if (keys.a || keys.ArrowLeft) mx -= 1;
-        if (keys.d || keys.ArrowRight) mx += 1;
+        // User feedback: Invert A and D so A moves left on screen, D moves right on screen
+        if (keys.a || keys.ArrowLeft) mx += 1;
+        if (keys.d || keys.ArrowRight) mx -= 1;
 
         sim.applyInputFrame({
           tick: sim.tick,
@@ -371,16 +611,34 @@ async function initGame(): Promise<void> {
       }
     }
 
-    // Sync Character Mesh
+    // Sync Character Mesh Position
     character.group.position.x = sim.player.pos[0];
     character.group.position.y = sim.player.pos[1];
     character.group.position.z = sim.player.pos[2];
 
-    const isMoving =
-      keys.w || keys.s || keys.a || keys.d ||
-      keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight;
+    // Smooth Character Rotation towards movement velocity
+    const vx = sim.player.vel[0];
+    const vz = sim.player.vel[2];
+    const hSpeed = Math.hypot(vx, vz);
+    if (hSpeed > 0.15) {
+      const targetYaw = Math.atan2(vx, vz);
+      let diff = targetYaw - character.group.rotation.y;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      character.group.rotation.y += diff * Math.min(1.0, (delta / 1000) * 12.0);
+    }
 
-    character.update(delta / 1000, isMoving);
+    const isMoving =
+      keys.w ||
+      keys.s ||
+      keys.a ||
+      keys.d ||
+      keys.ArrowUp ||
+      keys.ArrowDown ||
+      keys.ArrowLeft ||
+      keys.ArrowRight;
+
+    character.update(delta / 1000, isMoving, sim.player.grounded);
 
     // Sync Scene Entities
     gameScene.syncLanterns(sim.lanterns);

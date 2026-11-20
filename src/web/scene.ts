@@ -12,7 +12,10 @@ export class GameScene {
   private cloudsMesh: THREE.InstancedMesh;
   private islandGroup: THREE.Group;
 
-  public lanternMeshes: Map<string, { group: THREE.Group; light: THREE.PointLight; core: THREE.Mesh }> = new Map();
+  public lanternMeshes: Map<
+    string,
+    { group: THREE.Group; light: THREE.PointLight; core: THREE.Mesh; beacon: THREE.Mesh }
+  > = new Map();
   public moteMeshes: Map<string, THREE.Group> = new Map();
   public shadeMeshes: Map<string, { group: THREE.Group; eye: THREE.Mesh; aura: THREE.PointLight }> = new Map();
   public drifterMeshes: Map<string, THREE.Group> = new Map();
@@ -20,15 +23,14 @@ export class GameScene {
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
-    // Standard color palette: Trời đêm #0E1430, sương #1B2350
     this.scene.background = new THREE.Color(0x0e1430);
-    this.scene.fog = new THREE.FogExp2(0x1b2350, 0.018);
+    this.scene.fog = new THREE.FogExp2(0x1b2350, 0.015);
 
     this.camera = new THREE.PerspectiveCamera(
       60,
       window.innerWidth / window.innerHeight,
       0.1,
-      250
+      300
     );
 
     this.renderer = new THREE.WebGLRenderer({
@@ -40,12 +42,11 @@ export class GameScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
 
-    // Ambient light: initial 0.15
-    this.ambientLight = new THREE.AmbientLight(0x0e1430, 0.15);
+    this.ambientLight = new THREE.AmbientLight(0x0e1430, 0.2);
     this.scene.add(this.ambientLight);
 
-    this.moonLight = new THREE.DirectionalLight(0x7080b0, 0.4);
-    this.moonLight.position.set(25, 45, 25);
+    this.moonLight = new THREE.DirectionalLight(0x7080b0, 0.5);
+    this.moonLight.position.set(25, 50, 25);
     this.scene.add(this.moonLight);
 
     this.islandGroup = new THREE.Group();
@@ -57,9 +58,7 @@ export class GameScene {
     window.addEventListener("resize", () => this.onResize());
   }
 
-  // Build island geometry according to Night
   loadMapGeometry(mapConfig: MapConfig): void {
-    // Clear old island geometry
     while (this.islandGroup.children.length > 0) {
       this.islandGroup.remove(this.islandGroup.children[0]);
     }
@@ -70,15 +69,15 @@ export class GameScene {
     this.charmMeshes.clear();
 
     const grassMat = new THREE.MeshStandardMaterial({
-      color: 0x2f5d50, // Standard grass
+      color: 0x2f5d50,
       roughness: 0.9,
     });
     const woodMat = new THREE.MeshStandardMaterial({
-      color: 0x6b4a2f, // Standard wood
+      color: 0x6b4a2f,
       roughness: 0.8,
     });
     const stoneMat = new THREE.MeshStandardMaterial({
-      color: 0xc9b48a, // Sand / ancient stone
+      color: 0xc9b48a,
       roughness: 0.7,
     });
 
@@ -111,36 +110,30 @@ export class GameScene {
       bridge.position.set(35, -0.2, 0);
       this.islandGroup.add(bridge);
 
-      // Jump pads
       this.buildJumpPadVisual(20, 0, 18);
       this.buildJumpPadVisual(50, 0, -18);
     } else if (mapConfig.night === 3) {
       // Đảo Chuông: 3 tiers
-      // Tier 0 (Y=0): disc r=45m
       const tier0Geo = new THREE.CylinderGeometry(45, 43, 4, 64);
       const tier0 = new THREE.Mesh(tier0Geo, grassMat);
       tier0.position.y = -2;
       this.islandGroup.add(tier0);
 
-      // Tier 1 (Y=3): ring 12..24 at z>0
       const tier1Geo = new THREE.CylinderGeometry(24, 24, 3, 32, 1, false, 0, Math.PI);
       const tier1 = new THREE.Mesh(tier1Geo, stoneMat);
       tier1.position.set(0, 1.5, 0);
       this.islandGroup.add(tier1);
 
-      // Tier 2 (Y=6): disc r=8m
       const tier2Geo = new THREE.CylinderGeometry(8, 8, 3, 32);
       const tier2 = new THREE.Mesh(tier2Geo, stoneMat);
       tier2.position.set(0, 4.5, 0);
       this.islandGroup.add(tier2);
 
-      // Bell Tower at center: cylinder r=2m, height 8m
       const towerGeo = new THREE.CylinderGeometry(2, 2.2, 8, 16);
       const tower = new THREE.Mesh(towerGeo, woodMat);
       tower.position.set(0, 10, 0);
       this.islandGroup.add(tower);
 
-      // Jump pad at (0, 3, 13)
       this.buildJumpPadVisual(0, 3, 13);
     }
   }
@@ -150,8 +143,8 @@ export class GameScene {
     const padMat = new THREE.MeshStandardMaterial({
       color: 0x8fa3b8,
       emissive: 0x2288aa,
-      emissiveIntensity: 0.6,
-      roughness: 0.4,
+      emissiveIntensity: 0.8,
+      roughness: 0.3,
     });
     const pad = new THREE.Mesh(padGeo, padMat);
     pad.position.set(x, y + 0.1, z);
@@ -183,7 +176,7 @@ export class GameScene {
   private buildSeaOfClouds(): THREE.InstancedMesh {
     const cloudGeo = new THREE.DodecahedronGeometry(6, 1);
     const cloudMat = new THREE.MeshStandardMaterial({
-      color: 0x12384a, // Biển mây chuẩn
+      color: 0x12384a,
       roughness: 1.0,
       transparent: true,
       opacity: 0.7,
@@ -209,7 +202,7 @@ export class GameScene {
     return mesh;
   }
 
-  // Sync 3D Lanterns
+  // Sync 3D Lanterns with Beacon Beams
   syncLanterns(lanterns: LanternState[]): void {
     for (const l of lanterns) {
       let entry = this.lanternMeshes.get(l.id);
@@ -230,7 +223,7 @@ export class GameScene {
         // Octagonal Cage
         const cageGeo = new THREE.OctahedronGeometry(0.85, 0);
         const cageMat = new THREE.MeshStandardMaterial({
-          color: 0x5b5f6e, // Đèn tắt
+          color: 0x5b5f6e,
           roughness: 0.6,
           wireframe: true,
         });
@@ -249,7 +242,7 @@ export class GameScene {
         group.add(core);
 
         // Light
-        const light = new THREE.PointLight(0xffb347, 0, 20);
+        const light = new THREE.PointLight(0xffb347, 0, 22);
         light.position.y = 3.2;
         group.add(light);
 
@@ -266,24 +259,43 @@ export class GameScene {
         safeRing.position.y = 0.05;
         group.add(safeRing);
 
+        // BEACON BEAM: Glowing vertical light column shooting into the sky (height 45m)
+        const beaconGeo = new THREE.CylinderGeometry(0.18, 0.35, 45, 12, 1, true);
+        const beaconMat = new THREE.MeshBasicMaterial({
+          color: 0xffe9b0,
+          transparent: true,
+          opacity: 0.35,
+          side: THREE.DoubleSide,
+        });
+        const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+        beacon.position.y = 25.0; // reaches up to Y=47.5m
+        group.add(beacon);
+
         this.scene.add(group);
-        entry = { group, light, core };
+        entry = { group, light, core, beacon };
         this.lanternMeshes.set(l.id, entry);
       }
 
       entry.group.position.set(l.pos[0], l.pos[1], l.pos[2]);
 
+      // Subtle beacon pulse
+      const beaconMat = entry.beacon.material as THREE.MeshBasicMaterial;
+
       if (l.lit) {
-        entry.light.intensity = 2.8;
+        entry.light.intensity = 3.0;
         const coreMat = entry.core.material as THREE.MeshStandardMaterial;
-        coreMat.color.setHex(0xffb347); // Đèn sáng
-        coreMat.emissive.setHex(0xffe9b0); // Lõi
+        coreMat.color.setHex(0xffb347);
+        coreMat.emissive.setHex(0xffe9b0);
         coreMat.emissiveIntensity = 1.0;
 
         const safeRing = entry.group.children[4] as THREE.Mesh;
         if (safeRing && safeRing.material) {
-          (safeRing.material as THREE.MeshBasicMaterial).opacity = 0.3;
+          (safeRing.material as THREE.MeshBasicMaterial).opacity = 0.35;
         }
+
+        // Lit lantern beacon turns into steady radiant gold
+        beaconMat.color.setHex(0xffb347);
+        beaconMat.opacity = 0.15;
       } else {
         const fillRatio = Math.min(1.0, l.deposited / 10.0);
         entry.light.intensity = fillRatio * 1.0;
@@ -296,17 +308,20 @@ export class GameScene {
           coreMat.color.setHex(0x5b5f6e);
           coreMat.emissive.setHex(0x000000);
         }
+
+        // Unlit beacon pulses brightly so player can spot it from far away
+        const pulse = Math.sin(Date.now() * 0.004) * 0.15 + 0.35;
+        beaconMat.color.setHex(0xffe58a);
+        beaconMat.opacity = pulse;
       }
     }
 
-    // Dynamic island illumination formula: 0.15 + 0.55 * (litCount / totalLanterns)
     const litCount = lanterns.filter((l) => l.lit).length;
     const total = Math.max(1, lanterns.length);
     this.ambientLight.intensity = 0.15 + 0.55 * (litCount / total);
     this.moonLight.intensity = 0.4 + 0.35 * (litCount / total);
   }
 
-  // Sync Motes
   syncMotes(motes: MoteState[]): void {
     const activeIds = new Set<string>();
 
@@ -317,21 +332,21 @@ export class GameScene {
         if (!meshGroup) {
           meshGroup = new THREE.Group();
 
-          const sphereGeo = new THREE.SphereGeometry(0.22, 12, 12);
+          const sphereGeo = new THREE.SphereGeometry(0.24, 12, 12);
           const sphereMat = new THREE.MeshBasicMaterial({
-            color: m.kind === "dropped" ? 0xff5a5f : 0xfff6c2, // Đom đóm lõi
+            color: m.kind === "dropped" ? 0xff5a5f : 0xfff6c2,
           });
           const sphere = new THREE.Mesh(sphereGeo, sphereMat);
           meshGroup.add(sphere);
 
-          const light = new THREE.PointLight(0xffe58a, 0.8, 3.5);
+          const light = new THREE.PointLight(0xffe58a, 1.0, 4.0);
           meshGroup.add(light);
 
           this.scene.add(meshGroup);
           this.moteMeshes.set(m.id, meshGroup);
         }
 
-        const bob = Math.sin(Date.now() * 0.005 + m.pos[0] * 2) * 0.25 + 0.5;
+        const bob = Math.sin(Date.now() * 0.006 + m.pos[0] * 2) * 0.25 + 0.5;
         meshGroup.position.set(m.pos[0], m.pos[1] + bob, m.pos[2]);
       }
     }
@@ -344,7 +359,6 @@ export class GameScene {
     }
   }
 
-  // Sync Shades
   syncShades(shades: ShadeState[]): void {
     const activeIds = new Set<string>();
 
@@ -354,7 +368,6 @@ export class GameScene {
       if (!entry) {
         const group = new THREE.Group();
 
-        // Dark ink body: #120A1A
         const bodyGeo = new THREE.DodecahedronGeometry(0.75, 1);
         const bodyMat = new THREE.MeshStandardMaterial({
           color: 0x120a1a,
@@ -366,7 +379,6 @@ export class GameScene {
         body.position.y = 0.8;
         group.add(body);
 
-        // Eye: #7A3CFF
         const eyeGeo = new THREE.SphereGeometry(0.14, 8, 8);
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0x7a3cff });
         const eye = new THREE.Mesh(eyeGeo, eyeMat);
@@ -385,9 +397,8 @@ export class GameScene {
       const bob = Math.sin(Date.now() * 0.008 + s.pos[0]) * 0.15;
       entry.group.position.set(s.pos[0], s.pos[1] + bob, s.pos[2]);
 
-      // State colors
       if (s.state === "stunned") {
-        entry.eye.material = new THREE.MeshBasicMaterial({ color: 0x3a3450 }); // Bị choáng
+        entry.eye.material = new THREE.MeshBasicMaterial({ color: 0x3a3450 });
         entry.aura.color.setHex(0x3a3450);
         entry.aura.intensity = 0.3;
       } else {
@@ -405,7 +416,6 @@ export class GameScene {
     }
   }
 
-  // Sync Drifters (Gió Lạc)
   syncDrifters(drifters: DrifterState[]): void {
     const activeIds = new Set<string>();
 
@@ -416,7 +426,6 @@ export class GameScene {
         if (!group) {
           group = new THREE.Group();
 
-          // Ribbon shape in #8FA3B8
           const ribbonGeo = new THREE.ConeGeometry(0.5, 2.2, 8);
           const ribbonMat = new THREE.MeshStandardMaterial({
             color: 0x8fa3b8,
@@ -448,7 +457,6 @@ export class GameScene {
     }
   }
 
-  // Sync Charms (Bùa Gió)
   syncCharms(charms: CharmState[]): void {
     const activeIds = new Set<string>();
 
@@ -459,7 +467,6 @@ export class GameScene {
         if (!group) {
           group = new THREE.Group();
 
-          // Talisman: Red card #C8102E with gold border #F2C14E
           const cardGeo = new THREE.BoxGeometry(0.5, 0.8, 0.06);
           const cardMat = new THREE.MeshStandardMaterial({
             color: 0xc8102e,
@@ -495,15 +502,19 @@ export class GameScene {
     }
   }
 
-  updateCamera(playerPos: [number, number, number], camYawDeg: number, camPitchDeg: number): void {
+  updateCamera(
+    playerPos: [number, number, number],
+    camYawDeg: number,
+    camPitchDeg: number,
+    camDist: number = 7.5
+  ): void {
     const yawRad = (camYawDeg * Math.PI) / 180.0;
     const pitchRad = (camPitchDeg * Math.PI) / 180.0;
-    const dist = 7.5;
-    const height = 3.5;
+    const height = 3.2;
 
-    const camX = playerPos[0] - Math.sin(yawRad) * Math.cos(pitchRad) * dist;
-    const camZ = playerPos[2] - Math.cos(yawRad) * Math.cos(pitchRad) * dist;
-    const camY = playerPos[1] + height + Math.sin(pitchRad) * dist;
+    const camX = playerPos[0] - Math.sin(yawRad) * Math.cos(pitchRad) * camDist;
+    const camZ = playerPos[2] - Math.cos(yawRad) * Math.cos(pitchRad) * camDist;
+    const camY = playerPos[1] + height + Math.sin(pitchRad) * camDist;
 
     this.camera.position.set(camX, Math.max(0.5, camY), camZ);
     this.camera.lookAt(playerPos[0], playerPos[1] + 1.2, playerPos[2]);

@@ -52,7 +52,11 @@ node dist/headless.js --seed 42 --night 3 --ticks 180 --out docs/proof/phase-2/t
 
 ## 6. Sáng tạo của tôi (Creative Additions)
 - **Cốt truyện & Lời dặn Ông Đăng:** Mỗi đêm chơi đều có lời nhắn nhủ dẫn dắt giàu cảm xúc từ người giữ đèn tiền bối.
-- **Mô hình Mây truyền thống:** Nhân vật áo lam với chiếc khăn đỏ, đội nón lá treo lồng đèn nhỏ phát sáng ấm áp đung đưa theo từng bước chân.
+- **Mô hình Mây 3D sống động:** Nhân vật áo lam với chiếc khăn đỏ, đội nón lá treo lồng đèn nhỏ phát sáng ấm áp đung đưa, hoạt ảnh bước chân đung đưa tay chân và tự động xoay mượt mà theo hướng di chuyển.
+- **Cột sáng Beacon dẫn đường:** Mỗi ngọn Đèn Lồng Lớn chiếu một cột sáng ấm áp cao 45m lên bầu trời đêm, giúp người chơi dễ dàng định hướng vị trí đèn từ bất kỳ đâu trên đảo. Khi thắp sáng, cột sáng chuyển thành ánh sáng xanh rực rỡ và kích hoạt vùng an toàn 6m.
+- **Bản đồ Radar Vệ tinh (Minimap 2D):** HUD góc trên bên phải hiển thị bản đồ trực quan theo thời gian thực (vị trí Mây và hướng nhìn, các ngọn đèn, đom đóm, Bóng Mực và phạm vi vùng an toàn).
+- **Hệ thống Nhiệm vụ & Thông báo Nổi (Quest Tracker & Toast):** Chỉ dẫn rõ ràng từng bước mục tiêu hiện tại (nhặt đom đóm, đến đèn lồng, bấm E nạp ánh sáng) và hiển thị thông báo tức thì khi nhặt đom đóm, nạp đèn, lướt hay bị tấn công.
+- **Menu Hướng dẫn Chi tiết (Phím H hoặc nút [?]):** Bảng hướng dẫn trực quan đầy đủ về phím bấm, cơ chế bục nhảy, bùa gió và mẹo sinh tồn.
 - **Biển mây bồng bềnh & Bảng màu cổ tích chuẩn:** Sử dụng chính xác bảng màu chuẩn (#0E1430, #2F5D50, #C9B48A, #6B4A2F, #12384A, #FFB347, #FFE9B0,...).
 - **Âm thanh tổng hợp (Procedural Audio):** Hệ thống âm thanh độc lập tạo bằng Web Audio API không phụ thuộc tệp tài nguyên ngoài, hỗ trợ tùy chỉnh âm lượng và độ nhạy chuột lưu vào `localStorage`.
 - **Bảo đảm Test Contract:** Toàn bộ phần sáng tạo đồ họa và âm thanh chỉ nằm ở tầng hiển thị, tắt hoàn toàn khi chạy headless.
