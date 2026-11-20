@@ -427,6 +427,160 @@
     .guide-table th {
       color: #F2C14E;
     }
+
+    /* Accessibility: Reduced Motion */
+    body.reduced-motion * {
+      animation-duration: 0.001s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001s !important;
+    }
+
+    /* Accessibility: Large Font (x1.25) & minimum 18px base */
+    .hud-title {
+      font-size: 14px;
+      color: #A0C0B5;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .quest-text {
+      font-size: 18px;
+      font-weight: bold;
+      color: #F5F1E6;
+      line-height: 1.3;
+    }
+    .quest-subtext {
+      font-size: 14px;
+      color: #FFE58A;
+      margin-top: 2px;
+    }
+    .hud-value {
+      font-size: 26px;
+      font-weight: bold;
+      color: #F2C14E;
+    }
+
+    body.font-large .hud-title {
+      font-size: 17px;
+    }
+    body.font-large .quest-text {
+      font-size: 22px;
+    }
+    body.font-large .quest-subtext {
+      font-size: 17px;
+    }
+    body.font-large .hud-value {
+      font-size: 32px;
+    }
+    body.font-large .hud-timer {
+      font-size: 36px;
+    }
+    body.font-large .interact-prompt {
+      font-size: 22px;
+    }
+    body.font-large .modal-box {
+      font-size: 18px;
+    }
+    body.font-large .modal-title {
+      font-size: 30px;
+    }
+    body.font-large .btn-action {
+      font-size: 18px;
+    }
+    body.font-large .btn-secondary {
+      font-size: 17px;
+    }
+
+    /* Subtitles / Visual Indicators */
+    .subtitle-alert {
+      position: absolute;
+      bottom: 85px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(14, 20, 48, 0.95);
+      border: 2px solid #FFFFFF;
+      color: #FFFFFF;
+      padding: 10px 28px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.8);
+      z-index: 150;
+      text-align: center;
+      pointer-events: none;
+      max-width: 80%;
+      display: none;
+    }
+
+    /* Threat Indicator Overlay: Arrows on screen edges */
+    .threat-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 90;
+      overflow: hidden;
+    }
+    .threat-arrow {
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      opacity: 0.85;
+      filter: drop-shadow(0 0 8px rgba(255, 68, 34, 0.8));
+    }
+    .threat-arrow.top {
+      top: 15px; left: 50%; transform: translateX(-50%);
+      border-width: 0 16px 24px 16px;
+      border-color: transparent transparent #FF4422 transparent;
+    }
+    .threat-arrow.bottom {
+      bottom: 15px; left: 50%; transform: translateX(-50%);
+      border-width: 24px 16px 0 16px;
+      border-color: #FF4422 transparent transparent transparent;
+    }
+    .threat-arrow.left {
+      left: 15px; top: 50%; transform: translateY(-50%);
+      border-width: 16px 24px 16px 0;
+      border-color: transparent #FF4422 transparent transparent;
+    }
+    .threat-arrow.right {
+      right: 15px; top: 50%; transform: translateY(-50%);
+      border-width: 16px 0 16px 24px;
+      border-color: transparent transparent transparent #FF4422;
+    }
+
+    /* Leaderboard & Keybind Tables */
+    .data-table {
+      width: 100%;
+      margin: 14px 0;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+    .data-table th, .data-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .data-table th {
+      color: #F2C14E;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+    .key-input-btn {
+      background: rgba(242, 193, 78, 0.2);
+      border: 1px solid #F2C14E;
+      color: #FFE58A;
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .key-input-btn.listening {
+      background: #FF4422;
+      color: #FFF;
+      animation: pulseAlert 0.8s infinite alternate;
+    }
   </style>
 </head>
 <body>
@@ -607,7 +761,18 @@
     <div class="modal-box">
       <div class="modal-title" id="modal-result-title">CHIẾN THẮNG!</div>
       <div class="modal-msg" id="modal-result-msg">Mây đã thắp sáng các ngọn đèn!</div>
-      <div style="font-size: 22px; font-weight: bold; color: #FFE58A; margin-bottom: 20px;" id="modal-result-score">Điểm: 0</div>
+      <div style="font-size: 22px; font-weight: bold; color: #FFE58A; margin-bottom: 12px;" id="modal-result-score">Điểm: 0</div>
+
+      <!-- Save Score to Leaderboard Section -->
+      <div id="save-score-section" style="margin: 12px 0; background: rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; border: 1px solid rgba(242,193,78,0.3);">
+        <div style="font-size: 14px; color: #FFE58A; margin-bottom: 8px;">Nhập tên lưu vào Bảng Xếp Hạng (3–12 ký tự):</div>
+        <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+          <input type="text" id="player-name-input" maxlength="12" placeholder="Ví dụ: May_Hero" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #F2C14E; background: rgba(0,0,0,0.5); color: #fff; font-size: 14px; width: 140px; text-align: center;" />
+          <button class="btn-action" id="btn-save-score" style="padding: 8px 16px; margin: 0; font-size: 13px;">Lưu Điểm</button>
+        </div>
+        <div id="save-score-status" style="font-size: 12px; color: #20E377; margin-top: 6px; min-height: 16px;"></div>
+      </div>
+
       <button class="btn-action" id="btn-next-action">Đêm Tiếp Theo</button>
       <button class="btn-secondary" id="btn-retry-night">Chơi lại Đêm này</button>
     </div>
@@ -629,9 +794,85 @@
         <span>Bảng màu dễ phân biệt (Mù màu):</span>
         <input type="checkbox" id="cb-toggle" style="width: 18px; height: 18px; cursor: pointer;" />
       </div>
+      <div class="settings-row">
+        <span>Giảm chuyển động (Reduced Motion):</span>
+        <input type="checkbox" id="reduced-motion-toggle" style="width: 18px; height: 18px; cursor: pointer;" />
+      </div>
+      <div class="settings-row">
+        <span>Cỡ chữ UI lớn (×1.25):</span>
+        <input type="checkbox" id="font-large-toggle" style="width: 18px; height: 18px; cursor: pointer;" />
+      </div>
+
+      <div style="display: flex; gap: 8px; justify-content: center; margin: 14px 0;">
+        <button class="btn-secondary" id="btn-open-keybinds">Đổi Phím</button>
+        <button class="btn-secondary" id="btn-open-leaderboard">Bảng Xếp Hạng</button>
+      </div>
+
       <button class="btn-action" id="btn-resume">Tiếp tục</button>
       <button class="btn-secondary" id="btn-restart-from-pause">Chơi lại Đêm</button>
     </div>
+  </div>
+
+  <!-- Dialog Tùy chỉnh Phím điều khiển (Key Rebinding) -->
+  <div class="overlay-modal" id="keybind-modal">
+    <div class="modal-box" style="max-width: 500px;">
+      <div class="modal-title">TÙY CHỈNH PHÍM</div>
+      <p style="font-size: 13px; color: #A0C0B5; margin-bottom: 12px;">Nhấn vào nút phím bất kỳ rồi nhấn phím mới trên bàn phím để gán lại.</p>
+
+      <table class="data-table" id="keybind-table">
+        <thead>
+          <tr>
+            <th>Hành động</th>
+            <th>Phím hiện tại</th>
+          </tr>
+        </thead>
+        <tbody id="keybind-tbody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+
+      <div id="keybind-warning" style="font-size: 12px; color: #FF4422; min-height: 18px; margin-bottom: 10px;"></div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+        <button class="btn-secondary" id="btn-reset-keybinds" style="font-size: 12px;">Khôi phục mặc định</button>
+        <button class="btn-action" id="btn-close-keybinds" style="padding: 8px 24px; font-size: 13px;">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog Bảng Xếp Hạng (Leaderboard) -->
+  <div class="overlay-modal" id="leaderboard-modal">
+    <div class="modal-box" style="max-width: 540px;">
+      <div class="modal-title">BẢNG XẾP HẠNG (TOP 10)</div>
+
+      <table class="data-table" id="leaderboard-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;">#</th>
+            <th>Tên</th>
+            <th>Điểm</th>
+            <th>Đêm Thắng</th>
+            <th>Ngày đạt</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-tbody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+
+      <div style="text-align: center; margin-top: 16px;">
+        <button class="btn-action" id="btn-close-leaderboard" style="padding: 8px 28px;">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subtitle Alert & Threat Overlay -->
+  <div class="subtitle-alert" id="subtitle-alert"></div>
+  <div class="threat-overlay" id="threat-overlay">
+    <div class="threat-arrow top" id="threat-arrow-top" style="display: none;"></div>
+    <div class="threat-arrow bottom" id="threat-arrow-bottom" style="display: none;"></div>
+    <div class="threat-arrow left" id="threat-arrow-left" style="display: none;"></div>
+    <div class="threat-arrow right" id="threat-arrow-right" style="display: none;"></div>
   </div>
 
   <script type="module" src="/src/web/main.ts"></script>

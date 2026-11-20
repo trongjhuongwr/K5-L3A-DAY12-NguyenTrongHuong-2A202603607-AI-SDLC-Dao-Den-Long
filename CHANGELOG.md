@@ -4,6 +4,30 @@ Toàn bộ lịch sử cập nhật và các thay đổi phá vỡ (Breaking Cha
 
 ---
 
+## [Phase 4] — Contract v1.3 (2026-11-20)
+**Ticket-04: "Bình minh: phát hành v1.0.0"**
+
+### ✨ Tính năng mới (New Features)
+1. **Chế độ Đo Hiệu năng (Benchmark Mode):**
+   - Lệnh: `node dist/bench.js --seed 42 --duration 30 --out bench.json`
+   - Cảnh đo chuẩn: Đêm 1 với 200 Bóng Mực wander, 100 đom đóm, 3 đèn sáng 100 fuel, camera bay quỹ đạo tròn bán kính 30m độ cao 15m (15s/vòng).
+   - Xuất dữ liệu telemetry: `avg_fps`, `p1_low_fps`, `frame_ms_p95`, `frames`, `load_ms`, `peak_mem_mb`, `vsync_off`, `renderer`, `os`.
+2. **Kiểm thử Ổn định Dài hạn (Soak Test):**
+   - Lệnh: `node dist/soak.js --seed 7 --nights 10 --out soak.json`
+   - Chạy 10 đêm liên tiếp xoay vòng không crash (`crashes: 0`), bộ nhớ ổn định không rò rỉ (`mem_end <= 1.2 * mem_start`).
+3. **Bảng Xếp Hạng Cục bộ (Local Leaderboard):**
+   - Lưu trữ Top 10 điểm cao nhất kèm tên người chơi, số đêm thắng, thời gian đạt và seed.
+   - Hỗ trợ màn hình xem bảng xếp hạng trong game và lệnh xuất CLI: `node dist/headless.js --export-leaderboard out.json`.
+4. **Hỗ trợ Dễ tiếp cận Toàn diện (Accessibility):**
+   - Tùy biến đổi phím điều khiển (Key Rebinding) có phát hiện trùng lặp và nút khôi phục mặc định.
+   - Phụ đề thông báo sự kiện quan trọng (quái xuất hiện, gió giật, 10s cuối, đèn cạn dầu).
+   - Chỉ báo hướng nguy hiểm (mũi tên cảnh báo quanh mép màn hình).
+   - Tùy chọn Giảm chuyển động (Reduced Motion) và Cỡ chữ UI lớn (x1.25, base >= 18px).
+5. **Đóng gói Phát hành:**
+   - Tag nộp bài: `phase-4` và GitHub Release `v1.0.0`.
+
+---
+
 ## [Phase 3] — Contract v1.2 (2026-11-20)
 **Change Request Ticket-03: "Đèn cạn dầu"**
 

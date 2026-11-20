@@ -2,6 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { TuningConfig, ScenarioData, InputsData, InputFrame } from "./core/types.js";
 import { Simulation } from "./core/simulation.js";
+import {
+  LeaderboardEntry,
+  DEFAULT_LEADERBOARD,
+  sortAndPruneLeaderboard,
+} from "./core/leaderboard.js";
 
 // Load tuning from game.contract.json
 function loadContractTuning(): TuningConfig {
@@ -105,6 +110,37 @@ function validateInputs(inputs: InputsData): void {
 }
 
 export function runHeadless(): void {
+  // Support --export-leaderboard <path>
+  const exportIdx = process.argv.indexOf("--export-leaderboard");
+  if (exportIdx !== -1) {
+    const exportPath = process.argv[exportIdx + 1] || "out.json";
+    let entries: LeaderboardEntry[] = DEFAULT_LEADERBOARD;
+    try {
+      const lbFile = path.resolve(process.cwd(), "leaderboard.json");
+      if (fs.existsSync(lbFile)) {
+        const raw = fs.readFileSync(lbFile, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.entries)) {
+          entries = parsed.entries;
+        }
+      }
+    } catch {
+      // fallback to default
+    }
+    const sorted = sortAndPruneLeaderboard(entries);
+    const resolvedOut = path.resolve(process.cwd(), exportPath);
+    const dir = path.dirname(resolvedOut);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(
+      resolvedOut,
+      JSON.stringify({ entries: sorted }, null, 2) + "\n",
+      "utf-8"
+    );
+    process.exit(0);
+  }
+
   const cliArgs = parseArgs(process.argv.slice(2));
   const tuning = loadContractTuning();
 

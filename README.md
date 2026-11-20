@@ -1,89 +1,82 @@
-# Đảo Đèn Lồng - Phase 3: "Đèn cạn dầu"
+# Đảo Đèn Lồng - v1.0.0 (Phase 4: "Bình minh")
 
-Dự án game 3D góc nhìn thứ ba phát triển theo quy trình AI SDLC.
-Hỗ trợ đầy đủ chế độ chơi giao diện 3D trên nền web và chế độ Headless chạy tự động tuân thủ **Test Contract v1.2** (Change Request Ticket-03).
+Dự án game 3D góc nhìn thứ ba phát triển theo quy trình AI SDLC chuẩn mực.
+Hỗ trợ đầy đủ chế độ chơi giao diện 3D trên nền web và chế độ Headless chạy tự động tuân thủ **Test Contract v1.3** (Ticket-04).
 
 ---
 
 ## 1. Cài đặt và Khởi chạy (Tối đa 3 lệnh)
 
 ```bash
-# 1. Cài đặt thư viện và biên dịch headless
+# 1. Cài đặt thư viện và biên dịch toàn bộ bundle (headless, soak, bench)
 npm install && npm run build:headless
 
-# 2. Khởi chạy game có giao diện 3D (3 Đêm chơi)
+# 2. Khởi chạy game có giao diện 3D (3 Đêm chơi, Bảng xếp hạng, Tùy chỉnh phím)
 npm run dev
 
-# 3. Chạy toàn bộ bộ kiểm thử tự động Test Contract v1.2
+# 3. Chạy toàn bộ bộ kiểm thử tự động Test Contract v1.3
 npm test
 ```
 
 ---
 
-## 2. Hướng dẫn Điều khiển
-- **W / A / S / D** hoặc **Phím mũi tên**: Di chuyển nhân vật Mây (6.0 m/s; có Bùa Gió: 7.2 m/s).
-- **SPACE**: Nhảy ($V_y = 7.0$ m/s, trọng lực $-20$ m/s²).
-- **SHIFT**: Lướt nhanh (Dash 14 m/s trong 0.2s, hồi chiêu 1.5s; có Bùa Gió: không hồi chiêu).
-- **E**: Tương tác với Đèn Lồng:
-  - **Đèn chưa sáng:** Nạp đom đóm thắp đèn (10 đom đóm lần đầu; 5 đom đóm khi thắp lại).
-  - **Đèn đang sáng:** Châm thêm dầu (`used = min(đang mang, ceil((100 - fuel) / 10))`, mỗi đom đóm hồi 10 dầu).
-- **Q**: Tỏa Sáng để xua đuổi và làm choáng Bóng Mực trong 5m, đuổi Gió Lạc (tốn 3 đom đóm).
+## 2. Hướng dẫn Điều khiển & Tùy biến Phím
+- **W / A / S / D** hoặc **Phím mũi tên**: Di chuyển nhân vật Mây (6.0 m/s; có Bùa Gió: 7.2 m/s). *(Có thể đổi phím trong Menu Pause)*
+- **SPACE**: Nhảy ($V_y = 7.0$ m/s, trọng lực $-20$ m/s²). *(Có thể đổi phím)*
+- **SHIFT**: Lướt nhanh (Dash 14 m/s trong 0.2s, hồi chiêu 1.5s; có Bùa Gió: không hồi chiêu). *(Có thể đổi phím)*
+- **E**: Tương tác với Đèn Lồng (Nạp đom đóm thắp sáng hoặc châm dầu). *(Có thể đổi phím)*
+- **Q**: Tỏa Sáng để xua đuổi và làm choáng Bóng Mực trong 5m, đuổi Gió Lạc (tốn 3 đom đóm). *(Có thể đổi phím)*
 - **Rê chuột (Click khóa chuột)**: Xoay góc nhìn 360° tự do quanh Mây không cần giữ nút chuột (chuẩn game 3D hiện đại).
 - **C**: Căn góc nhìn camera lập tức ra ngay sau lưng Mây.
 - **Cuộn chuột (Scroll wheel)**: Thu phóng khoảng cách camera (zoom gần/xa từ 3.5m đến 14m).
-- **ESC / P**: Tạm dừng trò chơi (Pause), mở menu Cài đặt (Âm lượng, Độ nhạy chuột, Bảng màu dễ phân biệt).
+- **ESC / P**: Tạm dừng trò chơi (Pause), mở menu Cài đặt và Hỗ trợ tiếp cận.
 
 ---
 
-## 3. Luật Cốt lõi Mới — Ticket-03 "Đèn cạn dầu" (Contract v1.2)
-1. **Nhiên liệu Đèn Lồng (Fuel System):**
-   - Đèn có mức nhiên liệu tối đa là 100. Khi vừa thắp hoặc thắp lại, `fuel = 100`.
-   - Khi đang sáng, nhiên liệu tiêu hao tự nhiên với tốc độ `1.0 đơn vị/giây` (1/60 mỗi tick).
-   - Người chơi có thể đến gần bất kỳ đèn đang sáng nào còn vơi dầu và bấm `E` để châm dầu. Đèn đầy dầu (100) sẽ không nhận thêm.
-   - Khi cạn dầu (`fuel <= 0`): Đèn tắt hoàn toàn (`lit = false, fuel = 0, deposited = 0, ever_lit = true`), phát sự kiện `lantern_out`.
-2. **Thắp lại Đèn đã tắt (Relighting):**
-   - Đèn đã từng sáng trong Đêm (`ever_lit: true`) chỉ mất **5 đom đóm** để thắp lại (`relight_cost: 5`).
-   - Phát sự kiện `lantern_lit { lantern_id, relight: true }`.
-3. **Mất vùng an toàn & Bóng Mực hút dầu:**
-   - Đèn có `fuel < 30` bị **mất vùng an toàn 6m**.
-   - Bóng Mực đang tuần tra (`wander`) sẽ ưu tiên tìm đến đèn gần nhất có `fuel < 30`; khi vào cự ly 2.0m, Bóng Mực chuyển sang trạng thái `drain`, đứng yên và hút dầu với tốc độ **5.0 fuel/giây** (phát sự kiện `fuel_drain` mỗi 60 tick).
-   - Nhiều Bóng Mực hút cùng một đèn sẽ cộng dồn tốc độ hút.
-   - Nếu Mây đến gần ≤ 6m, Bóng Mực lập tức đổi sang `chase` săn người chơi.
-   - Khi Mây châm dầu đèn lên ≥ 30, bất kỳ Bóng Mực nào trong vùng 6m sẽ bị đẩy ra ngoài trong 30 tick mà không gây sát thương.
-4. **Điều kiện Thắng Mới — Sống sót tới Bình Minh (Dawn Survival):**
-   - Không còn thắng sớm khi thắp hết đèn! Người chơi phải giữ các ngọn đèn sáng tới khi hết thời gian của Đêm.
-   - Thời lượng: Đêm 1: 240s | Đêm 2: 270s | Đêm 3: 300s.
-   - **Thắng:** Khi thời gian về 0, số đèn đang sáng $\ge \lceil 0.6 \times \text{tổng số đèn} \rceil$ (phát sự kiện `game_over { result: "won", reason: "dawn_survived" }`).
-   - **Thua:** Khi thời gian về 0 mà số đèn sáng $< 60\%$ (`reason: "dawn"`), hoặc khi cạn ngọn lửa sinh mệnh (`flames <= 0`, `reason: "no_flames"`).
-5. **Sức chứa Túi Tăng động (Dynamic Capacity):**
-   - Bắt đầu ở 10 đom đóm. Mỗi lần thắp thành công một ngọn đèn mới lần đầu (`relight: false`), sức chứa tăng thêm +2:
-     $$\text{capacity} = \min(20, 10 + 2 \times \text{successful\_lights})$$
-   - Thắp lại đèn cũ không tăng sức chứa.
-6. **Hệ thống Điểm số Mới:**
-   - Nạp hoặc châm dầu: +5 điểm / đom đóm.
-   - Thắp đèn lần đầu: +100 điểm.
-   - Thắp lại đèn đã tắt: +40 điểm.
-   - Làm choáng Bóng Mực: +5 điểm (+15 điểm nếu con đó đang hút dầu).
-   - Thưởng khi Thắng Bình Minh: $+50$ điểm mỗi ngọn lửa còn lại + $(50 + \lfloor \text{fuel} \rfloor)$ mỗi đèn đang sáng.
-7. **Hỗ trợ Tiếp cận Người khiếm thị màu (Colorblind Mode):**
-   - Phân biệt hình khối: Đèn chưa sáng bị ép lùn 20% trục Y (`scale.y = 0.8`), đèn sáng giữ nguyên tỉ lệ chuẩn (`scale.y = 1.0`).
-   - Phân biệt tần số: Đèn sắp tắt (`fuel < 30`) nhấp nháy chu kỳ 1 Hz.
-   - Tùy chọn Bảng màu dễ phân biệt trong menu Pause: Mắt và hào quang Bóng Mực chuyển sang xanh lơ sáng `#00B3FF` (thay vì tím `#A033FF`); thông báo nguy cấp dùng chữ trắng `#FFFFFF` với ký hiệu ⚠.
+## 3. Các Lệnh Thực thi Chuẩn (Contract v1.3)
 
----
-
-## 4. Chế độ Headless & Test Contract v1.2
-Chế độ Headless chạy độc lập không giao diện, đảm bảo tính tất định tuyệt đối (100% Determinism) và siêu tốc (21.600 ticks < 0.2s):
+### 3.1. Chế độ Benchmark Hiệu năng (<bench_cmd>)
+Đo hiệu năng cảnh chuẩn: 200 Bóng Mực wander, 100 đom đóm, 3 đèn sáng 100 fuel, camera bay quỹ đạo tròn bán kính 30m, cao 15m (15s/vòng), khởi động 3s không đo, đo đúng `--duration` giây:
 ```bash
-# Chạy Đêm 1
-node dist/headless.js --seed 42 --night 1 --ticks 180 --out docs/proof/phase-3/test-night1.jsonl --snapshot-every 20
-
-# Chạy Đêm 2
-node dist/headless.js --seed 42 --night 2 --ticks 180 --out docs/proof/phase-3/test-night2.jsonl --snapshot-every 20
-
-# Chạy Đêm 3
-node dist/headless.js --seed 42 --night 3 --ticks 180 --out docs/proof/phase-3/test-night3.jsonl --snapshot-every 20
+node dist/bench.js --seed 42 --duration 30 --out bench.json
 ```
+- Kết quả benchmark đạt chuẩn: `avg_fps >= 60`, `p1_low_fps >= 30`, `load_ms <= 10000`.
+
+### 3.2. Chế độ Soak Test Ổn định Dài hạn (<soak_cmd>)
+Chạy 10 đêm liên tiếp trong cùng một tiến trình, input ngẫu nhiên theo seed, kiểm tra rò rỉ bộ nhớ:
+```bash
+node dist/soak.js --seed 7 --nights 10 --out soak.json
+```
+- Ngưỡng đạt: `crashes = 0` và `mem_end_mb <= 1.2 * mem_start_mb`.
+
+### 3.3. Xuất Bảng Xếp Hạng Cục bộ (<run_cmd> / <headless_cmd> --export-leaderboard)
+Xuất Top 10 bảng xếp hạng ra tệp JSON đúng thứ tự điểm giảm dần:
+```bash
+node dist/headless.js --export-leaderboard out.json
+```
+
+### 3.4. Chế độ Headless Mô phỏng Đêm chơi
+```bash
+# Đêm 1
+node dist/headless.js --seed 42 --night 1 --ticks 180 --out docs/proof/phase-4/test-night1.jsonl --snapshot-every 20
+
+# Đêm 2
+node dist/headless.js --seed 42 --night 2 --ticks 180 --out docs/proof/phase-4/test-night2.jsonl --snapshot-every 20
+
+# Đêm 3
+node dist/headless.js --seed 42 --night 3 --ticks 180 --out docs/proof/phase-4/test-night3.jsonl --snapshot-every 20
+```
+
+---
+
+## 4. Tính năng Tiếp cận Toàn diện (Accessibility)
+- **Đổi phím điều khiển (Key Rebinding):** Người chơi có thể gán lại phím cho cả 9 hành động (tiến, lùi, trái, phải, nhảy, lướt, tương tác, tỏa sáng, tạm dừng). Hệ thống tự động phát hiện trùng phím và cung cấp nút "Khôi phục mặc định". Phím lưu vào `localStorage`.
+- **Phụ đề & Chỉ báo nguy hiểm:**
+  - Thông báo phụ đề chữ lớn khi Bóng Mực xuất hiện, cảnh báo trước 3s khi gió giật sắp tới, đếm ngược 10s cuối trước bình minh, và cảnh báo khi đèn dưới 30% dầu.
+  - Mũi tên cảnh báo quanh mép màn hình (Threat Overlay) chỉ hướng tiếp cận của Bóng Mực đang áp sát.
+- **Giảm chuyển động (Reduced Motion):** Tùy chọn triệt tiêu hiệu ứng rung lắc camera và chớp màn hình.
+- **Cỡ chữ UI lớn (x1.25):** Toàn bộ văn bản giao diện thiết kế tối thiểu 18px ở 1280x720, hỗ trợ chế độ phóng to x1.25 rõ nét.
+- **Bảng màu dễ phân biệt (Colorblind Mode):** Mắt và hào quang Bóng Mực chuyển màu xanh lơ sáng `#00B3FF` thay cho tím; đèn chưa sáng bị ép lùn 20% trục Y (`scale.y = 0.8`), đèn sắp tắt nhấp nháy 1 Hz.
 
 ---
 
@@ -101,9 +94,13 @@ node dist/headless.js --seed 42 --night 3 --ticks 180 --out docs/proof/phase-3/t
 ---
 
 ## 6. Tài liệu và Bằng chứng Kiểm chứng
+- **Báo cáo Tổng kết Dự án (Retrospective):** [docs/notes/retro.md](docs/notes/retro.md)
 - **Quyết định Thiết kế (ADR-001):** [docs/notes/adr-001-fuel-and-win-condition.md](docs/notes/adr-001-fuel-and-win-condition.md)
 - **Lịch sử Thay đổi (Changelog):** [CHANGELOG.md](CHANGELOG.md)
 - **Nhật ký SDLC & AI:** [ai-log.md](docs/notes/ai-log.md)
-- **Bằng chứng kiểm chứng Phase 3:** Thư mục [docs/proof/phase-3/](docs/proof/phase-3/)
+- **Kết quả Benchmark:** [bench.json](bench.json)
+- **Kết quả Soak Test:** [soak.json](soak.json)
+- **Bằng chứng kiểm chứng Phase 4:** Thư mục [docs/proof/phase-4/](docs/proof/phase-4/)
 - **Harness AI:** [AGENTS.md](AGENTS.md)
 - **Ghi nhận nguồn:** [CREDITS.md](CREDITS.md)
+- **Giấy phép:** [LICENSE](LICENSE)

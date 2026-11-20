@@ -6,9 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run build:headless",
-    "build:headless": "esbuild src/headless.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/headless.js",
+    "build:headless": "esbuild src/headless.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/headless.js && npm run build:soak && npm run build:bench",
+    "build:soak": "esbuild src/soak.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/soak.js",
+    "build:bench": "esbuild src/bench.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/bench.js",
     "preview": "vite preview",
     "headless": "node dist/headless.js",
+    "soak": "node dist/soak.js",
+    "bench": "node dist/bench.js",
     "test": "node tests/verify.js",
     "test:headless": "npm run build:headless && node dist/headless.js --seed 42 --night 1 --ticks 180 --out docs/proof/phase-1/test-default.jsonl"
   },

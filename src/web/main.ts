@@ -3,6 +3,12 @@ import { TuningConfig } from "../core/types.js";
 import { GameScene } from "./scene.js";
 import { CharacterModel } from "./player.js";
 import { SoundManager } from "./audio.js";
+import {
+  LeaderboardEntry,
+  DEFAULT_LEADERBOARD,
+  sortAndPruneLeaderboard,
+  validatePlayerName,
+} from "../core/leaderboard.js";
 
 async function getTuning(): Promise<TuningConfig> {
   const resp = await fetch("/game.contract.json");
@@ -65,24 +71,63 @@ async function initGame(): Promise<void> {
   let prevMouseY = 0;
   let lastMouseMoveTime = 0;
 
-  const keys: Record<string, boolean> = {
-    w: false,
-    a: false,
-    s: false,
-    d: false,
-    ArrowUp: false,
-    ArrowLeft: false,
-    ArrowDown: false,
-    ArrowRight: false,
-    e: false,
-    q: false,
-    " ": false,
-    Shift: false,
-    Escape: false,
-    p: false,
-    h: false,
-    c: false,
+  // Key Rebinding Configuration
+  type ActionName =
+    | "forward"
+    | "backward"
+    | "left"
+    | "right"
+    | "jump"
+    | "dash"
+    | "interact"
+    | "pulse"
+    | "pause";
+
+  const ACTION_LABELS: Record<ActionName, string> = {
+    forward: "Tiến (Forward)",
+    backward: "Lùi (Backward)",
+    left: "Sang Trái (Left)",
+    right: "Sang Phải (Right)",
+    jump: "Nhảy (Jump)",
+    dash: "Lướt (Dash)",
+    interact: "Nạp / Châm Dầu (Interact)",
+    pulse: "Tỏa Sáng (Pulse)",
+    pause: "Tạm Dừng (Pause)",
   };
+
+  const DEFAULT_KEYBINDINGS: Record<ActionName, string[]> = {
+    forward: ["w", "ArrowUp"],
+    backward: ["s", "ArrowDown"],
+    left: ["a", "ArrowLeft"],
+    right: ["d", "ArrowRight"],
+    jump: [" "],
+    dash: ["Shift"],
+    interact: ["e", "E"],
+    pulse: ["q", "Q"],
+    pause: ["Escape", "p", "P"],
+  };
+
+  let keyBindings: Record<ActionName, string[]> = JSON.parse(
+    JSON.stringify(DEFAULT_KEYBINDINGS)
+  );
+
+  const savedKeybindings = localStorage.getItem("dao_den_long_keybindings");
+  if (savedKeybindings) {
+    try {
+      const parsed = JSON.parse(savedKeybindings);
+      keyBindings = { ...DEFAULT_KEYBINDINGS, ...parsed };
+    } catch {}
+  }
+
+  const keysPressed = new Set<string>();
+
+  function isActionActive(action: ActionName): boolean {
+    const list = keyBindings[action] || [];
+    for (const k of list) {
+      if (keysPressed.has(k)) return true;
+    }
+    return false;
+  }
 
   // UI elements
   const flamesBar = document.getElementById("flames-bar")!;
@@ -150,13 +195,18 @@ async function initGame(): Promise<void> {
   const btnResume = document.getElementById("btn-resume")!;
   const btnRestartFromPause = document.getElementById("btn-restart-from-pause")!;
 
+  const keybindModal = document.getElementById("keybind-modal")!;
+  const leaderboardModal = document.getElementById("leaderboard-modal")!;
+
   // Pointer Lock handling helper
   function requestPointerLock(): void {
     const isModalActive =
       introModal.classList.contains("active") ||
       gameoverModal.classList.contains("active") ||
       pauseModal.classList.contains("active") ||
-      tutorialModal.classList.contains("active");
+      tutorialModal.classList.contains("active") ||
+      (keybindModal && keybindModal.classList.contains("active")) ||
+      (leaderboardModal && leaderboardModal.classList.contains("active"));
 
     if (!isModalActive && document.pointerLockElement !== canvas) {
       try {
@@ -177,9 +227,44 @@ async function initGame(): Promise<void> {
     requestPointerLock();
   });
 
+  let listeningAction: ActionName | null = null;
+  const keybindWarning = document.getElementById("keybind-warning");
+
+  function handleKeyRebind(newKey: string): void {
+    if (!listeningAction) return;
+    if (newKey === "Escape") {
+      listeningAction = null;
+      if (keybindWarning) keybindWarning.textContent = "";
+      renderKeybindTable();
+      return;
+    }
+    // Check conflicts across other actions
+    for (const [action, keysList] of Object.entries(keyBindings)) {
+      if (action !== listeningAction && keysList.includes(newKey)) {
+        if (keybindWarning) {
+          keybindWarning.textContent = `⚠ Phím "${newKey}" đã được gán cho ${ACTION_LABELS[action as ActionName]}! Vui lòng chọn phím khác.`;
+        }
+        return;
+      }
+    }
+    keyBindings[listeningAction] = [newKey];
+    localStorage.setItem("dao_den_long_keybindings", JSON.stringify(keyBindings));
+    listeningAction = null;
+    if (keybindWarning) keybindWarning.textContent = "";
+    renderKeybindTable();
+    showToast("Đã lưu phím điều khiển mới!");
+  }
+
   window.addEventListener("keydown", (e) => {
-    if (e.key in keys) keys[e.key] = true;
-    if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+    if (listeningAction) {
+      handleKeyRebind(e.key);
+      e.preventDefault();
+      return;
+    }
+
+    keysPressed.add(e.key);
+
+    if (isActionActive("pause") && !listeningAction) {
       togglePause();
     }
     if (e.key === "h" || e.key === "H") {
@@ -195,7 +280,7 @@ async function initGame(): Promise<void> {
   });
 
   window.addEventListener("keyup", (e) => {
-    if (e.key in keys) keys[e.key] = false;
+    keysPressed.delete(e.key);
   });
 
   canvas.addEventListener("mousedown", (e) => {
@@ -269,6 +354,190 @@ async function initGame(): Promise<void> {
     });
   }
 
+  // 1. Reduced Motion Toggle
+  const reducedMotionToggle = document.getElementById("reduced-motion-toggle") as HTMLInputElement | null;
+  let isReducedMotion = localStorage.getItem("dao_den_long_reduced_motion") === "true";
+  if (reducedMotionToggle) {
+    reducedMotionToggle.checked = isReducedMotion;
+    if (isReducedMotion) document.body.classList.add("reduced-motion");
+    reducedMotionToggle.addEventListener("change", () => {
+      isReducedMotion = reducedMotionToggle.checked;
+      localStorage.setItem("dao_den_long_reduced_motion", String(isReducedMotion));
+      document.body.classList.toggle("reduced-motion", isReducedMotion);
+      showToast(isReducedMotion ? "🎬 Đã bật Giảm chuyển động" : "🎬 Đã tắt Giảm chuyển động");
+    });
+  }
+
+  // 2. Large Font UI Toggle
+  const fontLargeToggle = document.getElementById("font-large-toggle") as HTMLInputElement | null;
+  let isFontLarge = localStorage.getItem("dao_den_long_font_large") === "true";
+  if (fontLargeToggle) {
+    fontLargeToggle.checked = isFontLarge;
+    if (isFontLarge) document.body.classList.add("font-large");
+    fontLargeToggle.addEventListener("change", () => {
+      isFontLarge = fontLargeToggle.checked;
+      localStorage.setItem("dao_den_long_font_large", String(isFontLarge));
+      document.body.classList.toggle("font-large", isFontLarge);
+      showToast(isFontLarge ? "🔍 Đã bật Cỡ chữ lớn (×1.25)" : "🔍 Đã tắt Cỡ chữ lớn");
+    });
+  }
+
+  // 3. Keybind Modal wiring
+  const btnOpenKeybinds = document.getElementById("btn-open-keybinds");
+  const btnCloseKeybinds = document.getElementById("btn-close-keybinds");
+  const btnResetKeybinds = document.getElementById("btn-reset-keybinds");
+  const keybindTbody = document.getElementById("keybind-tbody");
+
+  function renderKeybindTable(): void {
+    if (!keybindTbody) return;
+    keybindTbody.innerHTML = "";
+    for (const [action, label] of Object.entries(ACTION_LABELS)) {
+      const act = action as ActionName;
+      const tr = document.createElement("tr");
+      const currentKeys = (keyBindings[act] || []).join(", ");
+      tr.innerHTML = `
+        <td style="font-weight: 500;">${label}</td>
+        <td>
+          <button class="key-input-btn ${listeningAction === act ? "listening" : ""}" data-action="${act}">
+            ${listeningAction === act ? "Nhấn phím bất kỳ..." : (currentKeys === " " ? "SPACE" : currentKeys.toUpperCase())}
+          </button>
+        </td>
+      `;
+      const btn = tr.querySelector(".key-input-btn") as HTMLButtonElement;
+      btn.addEventListener("click", () => {
+        listeningAction = act;
+        if (keybindWarning) keybindWarning.textContent = "";
+        renderKeybindTable();
+      });
+      keybindTbody.appendChild(tr);
+    }
+  }
+
+  btnOpenKeybinds?.addEventListener("click", () => {
+    pauseModal.classList.remove("active");
+    renderKeybindTable();
+    keybindModal.classList.add("active");
+    releasePointerLock();
+  });
+
+  btnCloseKeybinds?.addEventListener("click", () => {
+    keybindModal.classList.remove("active");
+    pauseModal.classList.add("active");
+  });
+
+  btnResetKeybinds?.addEventListener("click", () => {
+    keyBindings = JSON.parse(JSON.stringify(DEFAULT_KEYBINDINGS));
+    localStorage.removeItem("dao_den_long_keybindings");
+    if (keybindWarning) keybindWarning.textContent = "";
+    renderKeybindTable();
+    showToast("Đã khôi phục phím mặc định");
+  });
+
+  // 4. Leaderboard Modal wiring
+  const btnOpenLeaderboard = document.getElementById("btn-open-leaderboard");
+  const btnCloseLeaderboard = document.getElementById("btn-close-leaderboard");
+  const leaderboardTbody = document.getElementById("leaderboard-tbody");
+
+  function getLocalLeaderboard(): LeaderboardEntry[] {
+    const raw = localStorage.getItem("dao_den_long_leaderboard");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return sortAndPruneLeaderboard(parsed);
+      } catch {}
+    }
+    return DEFAULT_LEADERBOARD;
+  }
+
+  function saveLocalLeaderboard(entries: LeaderboardEntry[]): void {
+    localStorage.setItem(
+      "dao_den_long_leaderboard",
+      JSON.stringify(sortAndPruneLeaderboard(entries))
+    );
+  }
+
+  function renderLeaderboardModal(): void {
+    if (!leaderboardTbody) return;
+    const entries = getLocalLeaderboard();
+    leaderboardTbody.innerHTML = "";
+    entries.forEach((e, idx) => {
+      const tr = document.createElement("tr");
+      const d = new Date(e.achieved_at);
+      const dateStr = !isNaN(d.getTime())
+        ? `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`
+        : "Hôm nay";
+      tr.innerHTML = `
+        <td style="font-weight: bold; color: ${idx === 0 ? "#FFE58A" : idx === 1 ? "#C9B48A" : idx === 2 ? "#FFB347" : "#FFF"};">${idx + 1}</td>
+        <td style="font-weight: bold;">${e.name}</td>
+        <td style="color: #20E377; font-weight: bold;">${e.score}</td>
+        <td>${e.nights_won} Đêm</td>
+        <td style="font-size: 12px; color: #A0C0B5;">${dateStr}</td>
+      `;
+      leaderboardTbody.appendChild(tr);
+    });
+  }
+
+  btnOpenLeaderboard?.addEventListener("click", () => {
+    pauseModal.classList.remove("active");
+    renderLeaderboardModal();
+    leaderboardModal.classList.add("active");
+    releasePointerLock();
+  });
+
+  btnCloseLeaderboard?.addEventListener("click", () => {
+    leaderboardModal.classList.remove("active");
+    pauseModal.classList.add("active");
+  });
+
+  // 5. Save Score in Gameover Modal
+  const btnSaveScore = document.getElementById("btn-save-score") as HTMLButtonElement | null;
+  const playerNameInput = document.getElementById("player-name-input") as HTMLInputElement | null;
+  const saveScoreStatus = document.getElementById("save-score-status");
+
+  btnSaveScore?.addEventListener("click", () => {
+    if (!playerNameInput) return;
+    const name = playerNameInput.value.trim();
+    if (!validatePlayerName(name)) {
+      if (saveScoreStatus) {
+        saveScoreStatus.style.color = "#FF4422";
+        saveScoreStatus.textContent = "Tên phải từ 3–12 ký tự [A-Za-z0-9_]!";
+      }
+      return;
+    }
+    const currentEntries = getLocalLeaderboard();
+    const newEntry: LeaderboardEntry = {
+      name,
+      score: totalCampaignScore + sim.score,
+      nights_won: Math.max(0, currentNight - 1 + (sim.state === "won" ? 1 : 0)),
+      achieved_at: new Date().toISOString(),
+      seed: sim.seed,
+    };
+    currentEntries.push(newEntry);
+    saveLocalLeaderboard(currentEntries);
+    if (saveScoreStatus) {
+      saveScoreStatus.style.color = "#20E377";
+      saveScoreStatus.textContent = `✅ Đã lưu thành công cho "${name}"!`;
+    }
+    btnSaveScore.disabled = true;
+  });
+
+  // 6. Subtitles & Threat Alerts
+  const subtitleAlert = document.getElementById("subtitle-alert");
+  let subtitleTimer: number | null = null;
+  function showSubtitle(msg: string, durationMs: number = 3200): void {
+    if (!subtitleAlert) return;
+    subtitleAlert.textContent = msg;
+    subtitleAlert.style.display = "block";
+    if (subtitleTimer) clearTimeout(subtitleTimer);
+    subtitleTimer = window.setTimeout(() => {
+      subtitleAlert.style.display = "none";
+    }, durationMs);
+  }
+
+  let warned10s = false;
+  let warnedWind = false;
+  const warnedLowFuelLanterns = new Set<string>();
+
   function showNightIntro(night: number): void {
     const lore = NIGHT_LORES[night] || NIGHT_LORES[1];
     introTitle.textContent = lore.title;
@@ -286,6 +555,12 @@ async function initGame(): Promise<void> {
     introModal.classList.remove("active");
     gameoverModal.classList.remove("active");
     tutorialModal.classList.remove("active");
+    if (keybindModal) keybindModal.classList.remove("active");
+    if (leaderboardModal) leaderboardModal.classList.remove("active");
+
+    warned10s = false;
+    warnedWind = false;
+    warnedLowFuelLanterns.clear();
 
     camYawDeg = 0;
     targetCamYawDeg = 0;
@@ -729,23 +1004,85 @@ async function initGame(): Promise<void> {
       if (sim.state === "playing") {
         let mx = 0;
         let mz = 0;
-        if (keys.w || keys.ArrowUp) mz += 1;
-        if (keys.s || keys.ArrowDown) mz -= 1;
-        if (keys.a || keys.ArrowLeft) mx += 1;
-        if (keys.d || keys.ArrowRight) mx -= 1;
+        if (isActionActive("forward")) mz += 1;
+        if (isActionActive("backward")) mz -= 1;
+        if (isActionActive("left")) mx += 1;
+        if (isActionActive("right")) mx -= 1;
 
         sim.applyInputFrame({
           tick: sim.tick,
           move: [mx, mz],
           cam_yaw_deg: camYawDeg,
-          interact: keys.e,
-          pulse: keys.q,
-          jump: keys[" "],
-          dash: keys.Shift,
+          interact: isActionActive("interact"),
+          pulse: isActionActive("pulse"),
+          jump: isActionActive("jump"),
+          dash: isActionActive("dash"),
         });
 
         const events = sim.step();
         handleEvents(events);
+      }
+    }
+
+    // Subtitle & Visual Alerts update
+    if (sim.state === "playing") {
+      if (sim.timeLeftS <= 10.0 && sim.timeLeftS > 8.0 && !warned10s) {
+        warned10s = true;
+        showSubtitle("⏳ Chỉ còn 10 giây trước Bình Minh!");
+      }
+      if (currentNight >= 2 && sim.tick % 1800 === 1620 && !warnedWind) {
+        warnedWind = true;
+        showSubtitle("💨 Cảnh báo: Gió giật sắp tới trong 3 giây!");
+      } else if (sim.tick % 1800 !== 1620) {
+        warnedWind = false;
+      }
+      for (const l of sim.lanterns) {
+        if (l.lit && l.fuel < 30 && !warnedLowFuelLanterns.has(l.id)) {
+          warnedLowFuelLanterns.add(l.id);
+          showSubtitle(`🚨 Đèn Lồng ${l.id} sắp cạn dầu (<30%)! Vùng an toàn đã tắt!`);
+        } else if (l.lit && l.fuel >= 30) {
+          warnedLowFuelLanterns.delete(l.id);
+        }
+      }
+    }
+
+    // Directional Threat Arrows (Threat Overlay)
+    const arrowTop = document.getElementById("threat-arrow-top");
+    const arrowBottom = document.getElementById("threat-arrow-bottom");
+    const arrowLeft = document.getElementById("threat-arrow-left");
+    const arrowRight = document.getElementById("threat-arrow-right");
+
+    if (arrowTop && arrowBottom && arrowLeft && arrowRight) {
+      let nearestThreat: (typeof sim.shades)[0] | null = null;
+      let minThreatDist = 18.0;
+      for (const s of sim.shades) {
+        if (s.state === "chase" || s.state === "drain") {
+          const d = Math.hypot(s.pos[0] - sim.player.pos[0], s.pos[2] - sim.player.pos[2]);
+          if (d < minThreatDist) {
+            minThreatDist = d;
+            nearestThreat = s;
+          }
+        }
+      }
+
+      if (nearestThreat) {
+        const dx = nearestThreat.pos[0] - sim.player.pos[0];
+        const dz = nearestThreat.pos[2] - sim.player.pos[2];
+        const worldAngle = Math.atan2(dx, dz);
+        const camYawRad = (camYawDeg * Math.PI) / 180;
+        let relAngle = worldAngle - camYawRad;
+        while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+        while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+
+        arrowTop.style.display = relAngle >= -Math.PI / 4 && relAngle <= Math.PI / 4 ? "block" : "none";
+        arrowBottom.style.display = relAngle >= (3 * Math.PI) / 4 || relAngle <= (-3 * Math.PI) / 4 ? "block" : "none";
+        arrowRight.style.display = relAngle > Math.PI / 4 && relAngle < (3 * Math.PI) / 4 ? "block" : "none";
+        arrowLeft.style.display = relAngle < -Math.PI / 4 && relAngle > (-3 * Math.PI) / 4 ? "block" : "none";
+      } else {
+        arrowTop.style.display = "none";
+        arrowBottom.style.display = "none";
+        arrowLeft.style.display = "none";
+        arrowRight.style.display = "none";
       }
     }
 
@@ -776,7 +1113,7 @@ async function initGame(): Promise<void> {
     }
 
     // Soft Camera Auto-Follow behind Mây when running forward without touching mouse for 500ms
-    if ((keys.w || keys.ArrowUp) && hSpeed > 0.5 && now - lastMouseMoveTime > 500) {
+    if (isActionActive("forward") && hSpeed > 0.5 && now - lastMouseMoveTime > 500) {
       const facingDeg = (character.group.rotation.y * 180) / Math.PI;
       let autoDiff = facingDeg - targetCamYawDeg;
       while (autoDiff < -180) autoDiff += 360;
@@ -785,14 +1122,10 @@ async function initGame(): Promise<void> {
     }
 
     const isMoving =
-      keys.w ||
-      keys.s ||
-      keys.a ||
-      keys.d ||
-      keys.ArrowUp ||
-      keys.ArrowDown ||
-      keys.ArrowLeft ||
-      keys.ArrowRight;
+      isActionActive("forward") ||
+      isActionActive("backward") ||
+      isActionActive("left") ||
+      isActionActive("right");
 
     character.update(delta / 1000, isMoving, sim.player.grounded);
 
